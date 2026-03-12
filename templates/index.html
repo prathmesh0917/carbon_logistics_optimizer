@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Logistics Optimizer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f1923; color: #fff; transition: 0.3s; }
+        body.light { background: #f0f7f0; color: #1a472a; }
+        body.light .card { background: #fff; border-color: #b7e4c7; }
+        body.light .nav-btn { border-color: #1a472a; color: #1a472a; }
+        body.light input, body.light select { background: #f0f7f0; color: #1a472a; border-color: #b7e4c7; }
+        body.light .route-card { background: #f0f7f0; }
+        body.light .autocomplete-list { background: #fff; border-color: #b7e4c7; }
+        body.light .autocomplete-list li { color: #1a472a; }
+        body.light .autocomplete-list li:hover { background: #f0f7f0; }
+        header { background: linear-gradient(135deg, #1a472a, #2d6a4f); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { font-size: 24px; color: #74c69d; }
+        header p { font-size: 13px; color: #b7e4c7; }
+        .nav-btns { display: flex; gap: 10px; align-items: center; }
+        .nav-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #74c69d; background: transparent; color: #74c69d; cursor: pointer; font-size: 13px; text-decoration: none; display: inline-block; }
+        .nav-btn:hover, .nav-btn.active { background: #74c69d; color: #0f1923; }
+        .theme-toggle { background: none; border: 1px solid #74c69d; color: #74c69d; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        .card { background: #1a2634; border-radius: 12px; padding: 30px; margin-bottom: 25px; border: 1px solid #2d3f50; }
+        .card h2 { font-size: 18px; color: #74c69d; margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        label { font-size: 13px; color: #a0b4c4; margin-bottom: 6px; display: block; }
+        input, select { width: 100%; padding: 12px; background: #0f1923; border: 1px solid #2d3f50; border-radius: 8px; color: #fff; font-size: 14px; }
+        input:focus, select:focus { outline: none; border-color: #74c69d; }
+        .autocomplete-wrapper { position: relative; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #1a2634; border: 1px solid #74c69d; border-radius: 8px; z-index: 9999; max-height: 200px; overflow-y: auto; display: none; }
+        .autocomplete-list li { padding: 10px 12px; cursor: pointer; font-size: 13px; color: #fff; list-style: none; border-bottom: 1px solid #2d3f50; }
+        .autocomplete-list li:hover { background: #2d3f50; }
+        .btn-analyze { margin-top: 25px; width: 100%; padding: 14px; background: linear-gradient(135deg, #1a472a, #2d6a4f); color: #74c69d; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-analyze:hover { opacity: 0.9; transform: translateY(-1px); }
+        .results { display: none; }
+        .route-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
+        .route-card { background: #0f1923; border-radius: 10px; padding: 20px; border: 1px solid #2d3f50; position: relative; transition: 0.3s; }
+        .route-card:hover { transform: translateY(-3px); }
+        .route-card.recommended { border-color: #74c69d; box-shadow: 0 0 20px rgba(116,198,157,0.25); }
+        .badge { position: absolute; top: -10px; right: 15px; background: #74c69d; color: #0f1923; font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 20px; }
+        .route-card h3 { font-size: 15px; color: #74c69d; margin-bottom: 12px; }
+        .route-card p { font-size: 13px; color: #a0b4c4; margin-bottom: 6px; }
+        .route-card span { color: #fff; font-weight: bold; }
+        .emission-low { color: #74c69d !important; }
+        .emission-high { color: #e63946 !important; }
+        .emission-mid { color: #f4a261 !important; }
+        #charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        #map-container { width: 100%; height: 500px; border-radius: 10px; border: 1px solid #2d3f50; position: relative; z-index: 0; }
+        .report-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .report-card { background: #0f1923; border-radius: 10px; padding: 20px; border: 1px solid #2d3f50; text-align: center; }
+        .report-card h3 { font-size: 13px; color: #a0b4c4; margin-bottom: 10px; }
+        .report-card p { font-size: 26px; font-weight: bold; color: #74c69d; }
+        .report-card span { font-size: 12px; color: #a0b4c4; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .history-table th { background: #0f1923; color: #74c69d; padding: 10px; text-align: left; border-bottom: 1px solid #2d3f50; }
+        .history-table td { padding: 10px; border-bottom: 1px solid #1a2634; color: #a0b4c4; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .loading { display: none; text-align: center; padding: 20px; color: #74c69d; font-size: 16px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #2d3f50; border-top: 4px solid #74c69d; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .grade-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 13px; margin-left: 8px; }
+        .grade-A { background: #74c69d; color: #0f1923; }
+        .grade-B { background: #f4a261; color: #0f1923; }
+        .grade-C { background: #e63946; color: #fff; }
+        .co2-saved { background: #1a2634; border: 1px solid #74c69d; border-radius: 10px; padding: 15px; margin-top: 15px; text-align: center; }
+        .co2-saved h3 { color: #74c69d; font-size: 14px; margin-bottom: 8px; }
+        .co2-saved p { font-size: 22px; font-weight: bold; color: #fff; }
+        .model-comparison { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .model-card { background: #0f1923; border-radius: 8px; padding: 12px; border: 1px solid #2d3f50; text-align: center; }
+        .model-card h4 { font-size: 11px; color: #a0b4c4; margin-bottom: 6px; }
+        .model-card p { font-size: 16px; font-weight: bold; color: #74c69d; }
+        .journey-info { display: flex; align-items: center; gap: 15px; background: #0f1923; border-radius: 10px; padding: 15px; margin-bottom: 20px; border: 1px solid #2d3f50; flex-wrap: wrap; }
+        .journey-info span { color: #74c69d; font-weight: bold; }
+        .journey-info p { color: #a0b4c4; font-size: 13px; }
+        .journey-time-card { background: #0f1923; border-radius: 10px; padding: 15px; border: 1px solid #74c69d; text-align: center; min-width: 150px; }
+        .journey-time-card h4 { font-size: 12px; color: #a0b4c4; margin-bottom: 5px; }
+        .journey-time-card p { font-size: 20px; font-weight: bold; color: #74c69d; }
+        .timer-display { font-size: 32px; font-weight: bold; color: #74c69d; text-align: center; padding: 15px; background: #0f1923; border-radius: 10px; border: 1px solid #2d3f50; margin-top: 10px; letter-spacing: 3px; }
+        .timer-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .timer-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .timer-start { background: #74c69d; color: #0f1923; }
+        .timer-stop { background: #e63946; color: #fff; }
+        .timer-reset { background: #2d3f50; color: #fff; }
+        #fleet-map-container { width: 100%; height: 450px; border-radius: 10px; border: 1px solid #2d3f50; position: relative; z-index: 0; }
+        .chatbot-bubble { position: fixed; bottom: 30px; right: 30px; z-index: 9999; }
+        .chatbot-btn { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #1a472a, #2d6a4f); border: 2px solid #74c69d; color: #74c69d; font-size: 28px; cursor: pointer; box-shadow: 0 4px 20px rgba(116,198,157,0.4); transition: 0.3s; }
+        .chatbot-btn:hover { transform: scale(1.1); }
+        .chatbot-window { position: fixed; bottom: 100px; right: 30px; width: 360px; height: 500px; background: #1a2634; border-radius: 16px; border: 1px solid #74c69d; z-index: 9999; display: none; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .chatbot-window.open { display: flex; }
+        .chatbot-header { background: linear-gradient(135deg, #1a472a, #2d6a4f); padding: 15px 20px; border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: space-between; }
+        .chatbot-header h3 { color: #74c69d; font-size: 15px; }
+        .chatbot-close { background: none; border: none; color: #74c69d; font-size: 20px; cursor: pointer; }
+        .chatbot-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .chatbot-messages::-webkit-scrollbar { width: 4px; }
+        .chatbot-messages::-webkit-scrollbar-thumb { background: #2d3f50; border-radius: 4px; }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+        .msg.bot { background: #0f1923; color: #fff; border: 1px solid #2d3f50; align-self: flex-start; border-radius: 4px 12px 12px 12px; }
+        .msg.user { background: linear-gradient(135deg, #1a472a, #2d6a4f); color: #74c69d; align-self: flex-end; border-radius: 12px 4px 12px 12px; }
+        .chatbot-input { padding: 12px; border-top: 1px solid #2d3f50; display: flex; gap: 8px; }
+        .chatbot-input input { flex: 1; padding: 10px 14px; background: #0f1923; border: 1px solid #2d3f50; border-radius: 8px; color: #fff; font-size: 13px; }
+        .chatbot-input input:focus { outline: none; border-color: #74c69d; }
+        .chatbot-send { padding: 10px 16px; background: #74c69d; color: #0f1923; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .chat-suggestions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 15px 10px; }
+        .chat-suggestion { padding: 4px 10px; background: #0f1923; border: 1px solid #2d3f50; border-radius: 20px; font-size: 11px; color: #74c69d; cursor: pointer; white-space: nowrap; }
+        .chat-suggestion:hover { background: #2d3f50; }
+        .lang-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid #74c69d; background: transparent; color: #74c69d; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .lang-btn:hover { background: #74c69d; color: #0f1923; }
+        .voice-btn { position: fixed; bottom: 100px; right: 30px; z-index: 9999; width: 55px; height: 55px; border-radius: 50%; background: linear-gradient(135deg, #1a472a, #2d6a4f); border: 2px solid #74c69d; color: #74c69d; font-size: 24px; cursor: pointer; box-shadow: 0 4px 20px rgba(116,198,157,0.4); transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+        .voice-btn:hover { transform: scale(1.1); }
+        .voice-btn.listening { background: #e63946; border-color: #e63946; animation: voicePulse 1s infinite; }
+        @keyframes voicePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(230,57,70,0.4); } 50% { box-shadow: 0 0 0 15px rgba(230,57,70,0); } }
+        .voice-toast { position: fixed; bottom: 170px; right: 30px; z-index: 9999; background: #1a2634; border: 1px solid #74c69d; border-radius: 12px; padding: 15px 20px; max-width: 300px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .voice-toast.show { display: block; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .voice-toast h4 { color: #74c69d; font-size: 13px; margin-bottom: 5px; }
+        .voice-toast p { color: #fff; font-size: 13px; }
+        .voice-commands { position: fixed; bottom: 170px; right: 100px; z-index: 9998; background: #1a2634; border: 1px solid #2d3f50; border-radius: 12px; padding: 20px; width: 280px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .voice-commands h4 { color: #74c69d; font-size: 14px; margin-bottom: 12px; }
+        .voice-commands ul { list-style: none; }
+        .voice-commands ul li { color: #a0b4c4; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #2d3f50; }
+        .voice-commands ul li span { color: #74c69d; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>🌿 Carbon Logistics Optimizer</h1>
+        <p>AI-powered eco-friendly route recommendations</p>
+    </div>
+    <div class="nav-btns">
+        <button class="nav-btn active" onclick="showPage('home', this)">🏠 Home</button>
+        <button class="nav-btn" onclick="showPage('report', this)">📋 Report</button>
+        <button class="nav-btn" onclick="showPage('history', this)">🕘 History</button>
+        <button class="nav-btn" onclick="showPage('fleet', this)">🚛 Fleet</button>
+        <a href="/realtime" class="nav-btn" style="text-decoration:none;">📡 Live Tracker</a>
+<a href="/dashboard" class="nav-btn" style="text-decoration:none;">📊 Dashboard</a>
+<a href="/predictive" class="nav-btn" style="text-decoration:none;">📈 Predictions</a>
+<a href="/scorecard" class="nav-btn" style="text-decoration:none;">🏆 Score Card</a>
+<a href="/tracking" class="nav-btn" style="text-decoration:none;">📍 Track Fleet</a>
+<a href="/co2map" class="nav-btn" style="text-decoration:none;">🌍 CO2 Map</a>
+<button class="nav-btn" onclick="showPage('tools', this)">🛠️ Tools</button>
+<button class="lang-btn" onclick="toggleLanguage()" id="lang-toggle">🇮🇳 हिंदी</button>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">🌙</button>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- HOME PAGE -->
+    <div class="page active" id="page-home">
+        <div class="card">
+            <h2>📦 Enter Delivery Details</h2>
+            <div class="form-grid">
+                <div>
+                    <label>📍 Source Location</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="source" placeholder="Type exact address or city..." oninput="addressSearch('source')" autocomplete="new-password" name="source-field">
+                        <ul class="autocomplete-list" id="source-list"></ul>
+                    </div>
+                </div>
+                <div>
+                    <label>🏁 Destination Location</label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="destination" placeholder="Type exact address or city..." oninput="addressSearch('destination')" autocomplete="new-password" name="destination-field">
+
+                        <ul class="autocomplete-list" id="destination-list"></ul>
+                    </div>
+                </div>
+                <div>
+                    <label>🚗 Vehicle Type</label>
+                    <select id="vehicle_type">
+                        <option value="bike">🏍️ Bike</option>
+                        <option value="car">🚗 Car</option>
+                        <option value="van">🚐 Van</option>
+                        <option value="truck">🚚 Truck</option>
+                    </select>
+                </div>
+                <div>
+                    <label>⚖️ Cargo Weight (kg)</label>
+                    <input type="number" id="cargo_weight_kg" placeholder="e.g. 500" min="1">
+                </div>
+            </div>
+            <button class="btn-analyze" onclick="predict()">🔍 Analyze Routes</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing routes and calculating emissions...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="card">
+                <h2>🗺️ Journey Overview & Satellite Map</h2>
+                <div class="journey-info">
+                    <div><p>From</p><span id="journey-from">-</span></div>
+                    <div style="font-size:24px; color:#74c69d;">→</div>
+                    <div><p>To</p><span id="journey-to">-</span></div>
+                    <div class="journey-time-card">
+                        <h4>⏱️ Estimated Time</h4>
+                        <p id="journey-duration">-</p>
+                    </div>
+                    <div class="journey-time-card">
+                        <h4>📏 Distance</h4>
+                        <p id="journey-distance">-</p>
+                    </div>
+                </div>
+                <div id="map-container"></div>
+                <p style="margin-top:10px; font-size:12px; color:#a0b4c4;">🟢 Green = Recommended &nbsp; 🟡 Yellow = Medium Traffic &nbsp; 🔴 Red = High Traffic &nbsp; ⚡ EV Stations</p>
+                <div style="margin-top:20px;">
+                    <h3 style="color:#74c69d; margin-bottom:10px;">⏱️ Journey Timer</h3>
+                    <div class="timer-display" id="timer-display">00:00:00</div>
+                    <div class="timer-btns">
+                        <button class="timer-btn timer-start" onclick="startTimer()">▶ Start Journey</button>
+                        <button class="timer-btn timer-stop" onclick="stopTimer()">⏹ Stop</button>
+                        <button class="timer-btn timer-reset" onclick="resetTimer()">↺ Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🛣️ Route Comparison</h2>
+                <div class="route-cards" id="route-cards"></div>
+                <div class="co2-saved">
+                    <h3>🌱 CO2 Saved by choosing Eco Route vs Worst Route</h3>
+                    <p id="co2-saved-value">-</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🤖 ML Model Predictions (Recommended Route)</h2>
+                <div class="model-comparison">
+                    <div class="model-card"><h4>Random Forest</h4><p id="ml-rf">-</p><small style="color:#a0b4c4;">Fuel (L)</small></div>
+                    <div class="model-card"><h4>Linear Regression</h4><p id="ml-lr">-</p><small style="color:#a0b4c4;">Fuel (L)</small></div>
+                    <div class="model-card"><h4>Gradient Boosting</h4><p id="ml-gb">-</p><small style="color:#a0b4c4;">CO2 (kg)</small></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📊 Analytics</h2>
+                <div id="charts">
+                    <div id="emission-chart"></div>
+                    <div id="fuel-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT PAGE -->
+    <div class="page" id="page-report">
+        <div class="card">
+            <h2>📋 Sustainability Impact Report</h2>
+            <a href="/download-report" style="display:inline-block; margin-bottom:20px; padding:10px 20px; background:linear-gradient(135deg, #1a472a, #2d6a4f); color:#74c69d; border-radius:8px; text-decoration:none; font-weight:bold;">⬇️ Download PDF Report</a>
+            <div class="report-grid">
+                <div class="report-card"><h3>Total Deliveries</h3><p id="r-deliveries">-</p></div>
+                <div class="report-card"><h3>Total CO2 Emissions</h3><p id="r-emission">-</p><span>kg</span></div>
+                <div class="report-card"><h3>Total Fuel Consumed</h3><p id="r-fuel">-</p><span>liters</span></div>
+                <div class="report-card"><h3>Avg Emission / Delivery</h3><p id="r-avg-emission">-</p><span>kg</span></div>
+                <div class="report-card"><h3>Avg Fuel / Delivery</h3><p id="r-avg-fuel">-</p><span>liters</span></div>
+                <div class="report-card"><h3>🌳 Trees Equivalent Saved</h3><p id="r-trees">-</p></div>
+            </div>
+            <div id="vehicle-chart" style="margin-top:20px;"></div>
+            <div id="weekly-chart" style="margin-top:20px;"></div>
+        </div>
+    </div>
+
+    <!-- HISTORY PAGE -->
+    <div class="page" id="page-history">
+        <div class="card">
+            <h2>🕘 Delivery History</h2>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Vehicle</th><th>Distance (km)</th><th>Cargo (kg)</th>
+                        <th>Recommended Route</th><th>Fuel (L)</th><th>CO2 (kg)</th><th>Grade</th><th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+<!-- TOOLS PAGE -->
+    <div class="page" id="page-tools">
+
+        <!-- Vehicle Recommendation -->
+        <div class="card">
+            <h2>🚗 Vehicle Recommendation</h2>
+            <p style="color:#a0b4c4; font-size:13px; margin-bottom:20px;">Find the best vehicle for your delivery based on your priority</p>
+            <div class="form-grid">
+                <div>
+                    <label>📏 Distance (km)</label>
+                    <input type="number" id="rec-distance" placeholder="e.g. 150" min="1">
+                </div>
+                <div>
+                    <label>⚖️ Cargo Weight (kg)</label>
+                    <input type="number" id="rec-cargo" placeholder="e.g. 500" min="1">
+                </div>
+                <div>
+                    <label>🎯 Priority</label>
+                    <select id="rec-priority">
+                        <option value="eco">🌿 Eco Friendly</option>
+                        <option value="cost">💰 Lowest Cost</option>
+                        <option value="time">⚡ Fastest Time</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-analyze" onclick="recommendVehicle()">🔍 Recommend Vehicle</button>
+            <div id="rec-results" style="display:none; margin-top:20px;">
+                <div class="route-cards" id="rec-cards"></div>
+            </div>
+        </div>
+
+        <!-- Carbon Offset Calculator -->
+        <div class="card">
+            <h2>💰 Carbon Offset Calculator</h2>
+            <p style="color:#a0b4c4; font-size:13px; margin-bottom:20px;">Calculate how much it costs to offset your carbon emissions</p>
+            <div class="form-grid">
+                <div>
+                    <label>💨 Carbon Emission (kg)</label>
+                    <input type="number" id="offset-emission" placeholder="e.g. 2.5" step="0.01" min="0">
+                </div>
+            </div>
+            <button class="btn-analyze" onclick="calculateOffset()">💰 Calculate Offset</button>
+            <div id="offset-results" style="display:none; margin-top:20px;">
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:15px;">
+                    <div class="report-card"><h3>Offset Cost</h3><p id="offset-cost-inr">-</p><span>INR</span></div>
+                    <div class="report-card"><h3>Offset Cost</h3><p id="offset-cost-usd">-</p><span>USD</span></div>
+                    <div class="report-card"><h3>🌳 Trees Needed</h3><p id="offset-trees">-</p></div>
+                    <div class="report-card"><h3>🚗 km to Avoid</h3><p id="offset-km">-</p><span>by car</span></div>
+                    <div class="report-card"><h3>💡 LED Bulb Hours</h3><p id="offset-bulbs">-</p><span>equivalent</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EV Simulator -->
+        <div class="card">
+            <h2>⚡ What-if EV Simulator</h2>
+            <p style="color:#a0b4c4; font-size:13px; margin-bottom:20px;">See how much you save by switching to an Electric Vehicle</p>
+            <div class="form-grid">
+                <div>
+                    <label>📏 Distance (km)</label>
+                    <input type="number" id="ev-distance" placeholder="e.g. 150" min="1">
+                </div>
+                <div>
+                    <label>⚖️ Cargo Weight (kg)</label>
+                    <input type="number" id="ev-cargo" placeholder="e.g. 500" min="1">
+                </div>
+                <div>
+                    <label>🚗 Current Vehicle</label>
+                    <select id="ev-vehicle">
+                        <option value="bike">🏍️ Bike</option>
+                        <option value="car">🚗 Car</option>
+                        <option value="van">🚐 Van</option>
+                        <option value="truck">🚚 Truck</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-analyze" onclick="evSimulator()">⚡ Simulate EV Switch</button>
+            <div id="ev-results" style="display:none; margin-top:20px;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                    <div class="card" style="margin:0; border-color:#e63946;">
+                        <h3 style="color:#e63946; margin-bottom:15px;">🚗 Current Vehicle</h3>
+                        <p style="color:#a0b4c4; margin-bottom:8px;">Fuel: <span id="ev-current-fuel" style="color:#fff; font-weight:bold;">-</span> L</p>
+                        <p style="color:#a0b4c4; margin-bottom:8px;">CO2: <span id="ev-current-emission" style="color:#fff; font-weight:bold;">-</span> kg</p>
+                        <p style="color:#a0b4c4;">Cost: <span id="ev-current-cost" style="color:#fff; font-weight:bold;">-</span> INR</p>
+                    </div>
+                    <div class="card" style="margin:0; border-color:#74c69d;">
+                        <h3 style="color:#74c69d; margin-bottom:15px;">⚡ Electric Vehicle</h3>
+                        <p style="color:#a0b4c4; margin-bottom:8px;">Energy: <span id="ev-energy" style="color:#fff; font-weight:bold;">-</span> kWh</p>
+                        <p style="color:#a0b4c4; margin-bottom:8px;">CO2: <span id="ev-emission" style="color:#fff; font-weight:bold;">-</span> kg</p>
+                        <p style="color:#a0b4c4;">Cost: <span id="ev-cost" style="color:#fff; font-weight:bold;">-</span> INR</p>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:15px; margin-top:15px;">
+                    <div class="report-card"><h3>CO2 Saved</h3><p id="ev-saved-emission">-</p><span>kg</span></div>
+                    <div class="report-card"><h3>Cost Saved</h3><p id="ev-saved-cost">-</p><span>INR</span></div>
+                    <div class="report-card"><h3>% Reduction</h3><p id="ev-percent">-</p><span>%</span></div>
+                </div>
+                <div id="ev-chart" style="margin-top:20px;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FLEET PAGE -->
+    <div class="page" id="page-fleet">
+        <div class="card">
+            <h2>🚛 Multi-Delivery Fleet Optimizer</h2>
+            <p style="color:#a0b4c4; font-size:13px; margin-bottom:20px;">Add multiple deliveries with vehicle number plates for tracking</p>
+            <div id="fleet-deliveries">
+                <div class="form-grid fleet-row" style="margin-bottom:15px;" id="fleet-row-1">
+                    <div>
+                        <label>📍 Source</label>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" class="fleet-source" placeholder="Type address..." oninput="fleetAutocomplete(this, 'source')">
+                            <ul class="autocomplete-list fleet-source-list"></ul>
+                        </div>
+                    </div>
+                    <div>
+                        <label>🏁 Destination</label>
+                        <div class="autocomplete-wrapper">
+                            <input type="text" class="fleet-dest" placeholder="Type address..." oninput="fleetAutocomplete(this, 'dest')">
+                            <ul class="autocomplete-list fleet-dest-list"></ul>
+                        </div>
+                    </div>
+                    <div>
+                        <label>🚘 Vehicle Number Plate</label>
+                        <input type="text" class="fleet-plate" placeholder="e.g. MH12AB1234">
+                    </div>
+                </div>
+            </div>
+            <button class="btn-analyze" style="width:auto; padding:10px 20px; font-size:14px; margin-top:0;" onclick="addDelivery()">➕ Add Delivery</button>
+            <div class="form-grid" style="margin-top:20px;">
+                <div>
+                    <label>🚗 Vehicle Type</label>
+                    <select id="fleet-vehicle">
+                        <option value="bike">🏍️ Bike</option>
+                        <option value="car">🚗 Car</option>
+                        <option value="van">🚐 Van</option>
+                        <option value="truck">🚚 Truck</option>
+                    </select>
+                </div>
+                <div>
+                    <label>⚖️ Cargo Weight (kg)</label>
+                    <input type="number" id="fleet-cargo" placeholder="e.g. 500" min="1">
+                </div>
+            </div>
+            <button class="btn-analyze" onclick="optimizeFleet()">🔍 Optimize Fleet</button>
+        </div>
+
+        <div id="fleet-results" style="display:none;">
+            <div class="card">
+                <h2>🗺️ Fleet Route Map</h2>
+                <div id="fleet-map-container"></div>
+            </div>
+            <div class="card">
+                <h2>📦 Delivery Results</h2>
+                <table class="history-table">
+                    <thead>
+                        <tr><th>#</th><th>Plate</th><th>From</th><th>To</th><th>Distance (km)</th><th>Fuel (L)</th><th>CO2 (kg)</th></tr>
+                    </thead>
+                    <tbody id="fleet-table-body"></tbody>
+                </table>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-top:20px;">
+                    <div class="report-card"><h3>Total CO2</h3><p id="fleet-total-emission">-</p><span>kg</span></div>
+                    <div class="report-card"><h3>Total Fuel</h3><p id="fleet-total-fuel">-</p><span>liters</span></div>
+                    <div class="report-card"><h3>🌳 Trees Saved</h3><p id="fleet-trees">-</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ========== THEME ==========
+function toggleTheme() {
+    document.body.classList.toggle('light');
+    document.querySelector('.theme-toggle').textContent = document.body.classList.contains('light') ? '🌙' : '☀️';
+}
+
+// ========== PAGE NAV ==========
+function showPage(page, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (page === 'report') loadReport();
+    if (page === 'history') loadHistory();
+}
+
+let autocompleteTimer = null;
+
+async function addressSearch(field) {
+    const query = document.getElementById(field).value;
+    const list = document.getElementById(field + '-list');
+
+    if (query.length < 2) { list.style.display = 'none'; return; }
+
+    clearTimeout(autocompleteTimer);
+    autocompleteTimer = setTimeout(async () => {
+        try {
+            list.innerHTML = '<li style="color:#a0b4c4;">🔍 Searching...</li>';
+            list.style.display = 'block';
+
+            const res = await fetch(`/autocomplete?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+
+            list.innerHTML = '';
+            if (data.length === 0) {
+                list.innerHTML = '<li style="color:#a0b4c4;">No results found</li>';
+                list.style.display = 'block';
+                return;
+            }
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.display_name;
+                li.onclick = () => {
+                    document.getElementById(field).value = item.display_name;
+                    document.getElementById(field).dataset.lat = item.lat;
+                    document.getElementById(field).dataset.lng = item.lng;
+                    list.style.display = 'none';
+                };
+                list.appendChild(li);
+            });
+            list.style.display = 'block';
+        } catch(e) {
+            list.style.display = 'none';
+        }
+    }, 400);
+}
+
+
+async function fleetAutocomplete(input, type) {
+    const query = input.value;
+    const listClass = type === 'source' ? 'fleet-source-list' : 'fleet-dest-list';
+    const list = input.parentElement.querySelector('.' + listClass);
+    if (query.length < 3) { list.style.display = 'none'; return; }
+    try {
+        const res = await fetch(`/autocomplete?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        list.innerHTML = '';
+        data.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item.display_name;
+            li.onclick = () => {
+                input.value = item.display_name;
+                input.dataset.lat = item.lat;
+                input.dataset.lng = item.lng;
+                list.style.display = 'none';
+            };
+            list.appendChild(li);
+        });
+        list.style.display = data.length > 0 ? 'block' : 'none';
+    } catch(e) {}
+}
+
+document.addEventListener('click', (e) => {
+    document.querySelectorAll('.autocomplete-list').forEach(l => {
+        if (!l.parentElement.contains(e.target)) l.style.display = 'none';
+    });
+});
+
+// ========== TIMER ==========
+let timerInterval = null;
+let timerSeconds = 0;
+function startTimer() {
+    if (timerInterval) return;
+    timerInterval = setInterval(() => {
+        timerSeconds++;
+        const h = String(Math.floor(timerSeconds / 3600)).padStart(2, '0');
+        const m = String(Math.floor((timerSeconds % 3600) / 60)).padStart(2, '0');
+        const s = String(timerSeconds % 60).padStart(2, '0');
+        document.getElementById('timer-display').textContent = `${h}:${m}:${s}`;
+    }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+function resetTimer() { stopTimer(); timerSeconds = 0; document.getElementById('timer-display').textContent = '00:00:00'; }
+
+// ========== MAP ==========
+let mainMap = null;
+let fleetMap = null;
+
+function initMap(containerId, center) {
+    if (containerId === 'map-container' && mainMap) { mainMap.remove(); mainMap = null; }
+    if (containerId === 'fleet-map-container' && fleetMap) { fleetMap.remove(); fleetMap = null; }
+
+    const map = L.map(containerId, { zoomControl: true }).setView(center, 7);
+
+    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 18 });
+    const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 18 });
+
+    street.addTo(map);
+    L.control.layers({ '🗺️ Street': street, '🛰️ Satellite': satellite, '🌑 Dark': dark }).addTo(map);
+
+    setTimeout(() => map.invalidateSize(), 400);
+
+    if (containerId === 'map-container') mainMap = map;
+    else fleetMap = map;
+    return map;
+}
+
+// ========== PREDICT ==========
+let sourceCoords = null;
+let destCoords = null;
+
+async function predict() {
+    const source = document.getElementById('source').value;
+    const destination = document.getElementById('destination').value;
+    const vehicle_type = document.getElementById('vehicle_type').value;
+    const cargo_weight_kg = document.getElementById('cargo_weight_kg').value;
+
+    if (!source || !destination || !cargo_weight_kg) { alert('Please fill in all fields!'); return; }
+
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+
+    try {
+        const response = await fetch('/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source, destination, vehicle_type, cargo_weight_kg })
+        });
+
+        const data = await response.json();
+        const routes = data.routes;
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+
+        document.getElementById('journey-from').textContent = source;
+        document.getElementById('journey-to').textContent = destination;
+
+        sourceCoords = data.source_coords;
+        destCoords = data.dest_coords;
+
+        // Journey time
+        try {
+            const timeRes = await fetch(`/journey-time?slat=${sourceCoords[0]}&slng=${sourceCoords[1]}&dlat=${destCoords[0]}&dlng=${destCoords[1]}`);
+            const timeData = await timeRes.json();
+            if (!timeData.error) {
+                document.getElementById('journey-duration').textContent = timeData.formatted;
+                document.getElementById('journey-distance').textContent = timeData.distance_km + ' km';
+            }
+        } catch(e) {}
+
+        // Build map
+        const center = [(sourceCoords[0] + destCoords[0]) / 2, (sourceCoords[1] + destCoords[1]) / 2];
+        const map = initMap('map-container', center);
+
+        // Draw routes
+        for (let i = 0; i < routes.length; i++) {
+            const route = routes[i];
+            const color = route.recommended ? '#74c69d' : (route.traffic_level > 1.2 ? '#e63946' : '#f4a261');
+            try {
+                const osrmRes = await fetch(`http://router.project-osrm.org/route/v1/driving/${sourceCoords[1]},${sourceCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`);
+                const osrmData = await osrmRes.json();
+                if (osrmData.code === 'Ok') {
+                    const coords = osrmData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    L.polyline(coords, {
+                        color, weight: route.recommended ? 6 : 3,
+                        opacity: route.recommended ? 0.95 : 0.65,
+                        dashArray: route.recommended ? null : '8,8'
+                    }).bindTooltip(`<b>${route.route_name}</b><br>CO2: ${route.carbon_emission_kg} kg<br>Fuel: ${route.fuel_consumed_liters} L<br>Traffic: ${route.traffic_level <= 0.8 ? '🟢 Low' : route.traffic_level <= 1.2 ? '🟡 Medium' : '🔴 High'}`).addTo(map);
+                }
+            } catch(e) {
+                // fallback straight line
+                L.polyline([sourceCoords, destCoords], { color, weight: 3, dashArray: '8,8' }).addTo(map);
+            }
+        }
+
+        // Markers
+        L.marker(sourceCoords, { icon: L.divIcon({ className: '', html: '<div style="background:#4488ff;color:white;padding:5px 10px;border-radius:8px;font-weight:bold;font-size:12px;white-space:nowrap;">📦 Start</div>', iconAnchor: [30, 10] }) }).addTo(map);
+        L.marker(destCoords, { icon: L.divIcon({ className: '', html: '<div style="background:#e63946;color:white;padding:5px 10px;border-radius:8px;font-weight:bold;font-size:12px;white-space:nowrap;">🏁 End</div>', iconAnchor: [25, 10] }) }).addTo(map);
+
+        // EV Stations
+        try {
+            const evRes = await fetch(`https://api.openchargemap.io/v3/poi/?output=json&latitude=${center[0]}&longitude=${center[1]}&distance=50&distanceunit=km&maxresults=8&compact=true&verbose=false`);
+            const evData = await evRes.json();
+            if (Array.isArray(evData)) {
+                evData.forEach(station => {
+                    const addr = station.AddressInfo;
+                    if (addr && addr.Latitude && addr.Longitude) {
+                        L.marker([addr.Latitude, addr.Longitude], {
+                            icon: L.divIcon({ className: '', html: '<div style="background:#74c69d;color:#0f1923;padding:4px 8px;border-radius:6px;font-weight:bold;font-size:11px;">⚡EV</div>', iconAnchor: [15, 10] })
+                        }).bindPopup(`<b>⚡ ${addr.Title}</b><br>${addr.AddressLine1 || ''}`).addTo(map);
+                    }
+                });
+            }
+        } catch(e) {}
+
+        map.fitBounds([[sourceCoords[0], sourceCoords[1]], [destCoords[0], destCoords[1]]], { padding: [50, 50] });
+
+        // Route cards
+        const recommended = routes.find(r => r.recommended);
+        const worst = routes[routes.length - 1];
+        const co2Saved = Math.round((worst.carbon_emission_kg - recommended.carbon_emission_kg) * 10000) / 10000;
+        document.getElementById('co2-saved-value').textContent = co2Saved + ' kg CO2 saved 🌱';
+        document.getElementById('ml-rf').textContent = recommended.fuel_consumed_liters;
+        document.getElementById('ml-lr').textContent = recommended.fuel_lr_prediction;
+        document.getElementById('ml-gb').textContent = recommended.carbon_emission_kg;
+
+        let cardsHTML = '';
+        routes.forEach((route, i) => {
+            const isRec = route.recommended;
+            const grade = route.carbon_emission_kg < 0.5 ? 'A' : route.carbon_emission_kg < 1.5 ? 'B' : 'C';
+            const emClass = isRec ? 'emission-low' : i === routes.length - 1 ? 'emission-high' : 'emission-mid';
+            const trafficLabel = route.traffic_level <= 0.8 ? '🟢 Low' : route.traffic_level <= 1.2 ? '🟡 Medium' : '🔴 High';
+            cardsHTML += `
+                <div class="route-card ${isRec ? 'recommended' : ''}">
+                    ${isRec ? '<div class="badge">✅ Eco Recommended</div>' : ''}
+                    <h3>${route.route_name} <span class="grade-badge grade-${grade}">${grade}</span></h3>
+                    <p>Distance: <span>${route.distance_km} km</span></p>
+                    <p>Traffic: <span>${trafficLabel}</span></p>
+                    <p>Fuel Used: <span>${route.fuel_consumed_liters} L</span></p>
+                    <p>CO2 Emission: <span class="${emClass}">${route.carbon_emission_kg} kg</span></p>
+                </div>`;
+        });
+        document.getElementById('route-cards').innerHTML = cardsHTML;
+
+        Plotly.newPlot('emission-chart', [{ x: routes.map(r => r.route_name), y: routes.map(r => r.carbon_emission_kg), type: 'bar', marker: { color: routes.map(r => r.recommended ? '#74c69d' : '#2d6a4f') } }], { title: 'Carbon Emissions (kg)', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#fff' }, margin: { t: 40 } });
+        Plotly.newPlot('fuel-chart', [{ x: routes.map(r => r.route_name), y: routes.map(r => r.fuel_consumed_liters), type: 'bar', marker: { color: routes.map(r => r.recommended ? '#74c69d' : '#2d6a4f') } }], { title: 'Fuel Consumption (L)', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#fff' }, margin: { t: 40 } });
+
+    } catch(err) {
+        document.getElementById('loading').style.display = 'none';
+        alert('Error: ' + err.message);
+    }
+}
+
+// ========== REPORT ==========
+async function loadReport() {
+    try {
+        const res = await fetch('/report');
+        const data = await res.json();
+        if (data.message) { document.getElementById('r-deliveries').textContent = '0'; return; }
+        document.getElementById('r-deliveries').textContent = data.total_deliveries;
+        document.getElementById('r-emission').textContent = data.total_carbon_emission_kg;
+        document.getElementById('r-fuel').textContent = data.total_fuel_consumed_liters;
+        document.getElementById('r-avg-emission').textContent = data.avg_emission_per_delivery;
+        document.getElementById('r-avg-fuel').textContent = data.avg_fuel_per_delivery;
+        document.getElementById('r-trees').textContent = data.equivalent_trees_saved;
+
+        if (data.vehicle_stats) {
+            const vehicles = Object.keys(data.vehicle_stats);
+            Plotly.newPlot('vehicle-chart', [
+                { x: vehicles, y: vehicles.map(v => data.vehicle_stats[v].count), type: 'bar', name: 'Deliveries', marker: { color: '#74c69d' } },
+                { x: vehicles, y: vehicles.map(v => Math.round(data.vehicle_stats[v].emission * 10000) / 10000), type: 'bar', name: 'CO2 (kg)', marker: { color: '#e63946' } }
+            ], { title: 'Vehicle Usage & Emissions', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#fff' }, barmode: 'group', margin: { t: 40 } });
+        }
+
+        if (data.weekly_data && data.weekly_data.length > 0) {
+            Plotly.newPlot('weekly-chart', [{ x: data.weekly_data.map(d => d.date), y: data.weekly_data.map(d => d.emission), type: 'scatter', mode: 'lines+markers', line: { color: '#74c69d', width: 2 }, fill: 'tozeroy', fillcolor: 'rgba(116,198,157,0.1)' }], { title: 'Weekly CO2 Trend', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#fff' }, margin: { t: 40 } });
+        }
+    } catch(e) {}
+}
+
+// ========== HISTORY ==========
+async function loadHistory() {
+    try {
+        const res = await fetch('/history');
+        const data = await res.json();
+        let html = '';
+        data.history.forEach((r, i) => {
+            const grade = r.carbon_emission < 0.5 ? 'A' : r.carbon_emission < 1.5 ? 'B' : 'C';
+            html += `<tr>
+                <td>${i + 1}</td><td>${r.vehicle_type}</td><td>${r.distance_km}</td>
+                <td>${r.cargo_weight_kg}</td><td>${r.recommended_route}</td>
+                <td>${r.fuel_consumed}</td><td>${r.carbon_emission}</td>
+                <td><span class="grade-badge grade-${grade}">${grade}</span></td>
+                <td>${r.created_at}</td>
+            </tr>`;
+        });
+        document.getElementById('history-body').innerHTML = html || '<tr><td colspan="9" style="text-align:center;color:#a0b4c4;">No history yet</td></tr>';
+    } catch(e) {}
+}
+
+// ========== FLEET ==========
+let fleetRowCount = 1;
+
+function addDelivery() {
+    fleetRowCount++;
+    const div = document.createElement('div');
+    div.className = 'form-grid fleet-row';
+    div.style.marginBottom = '15px';
+    div.innerHTML = `
+        <div>
+            <label>📍 Source</label>
+            <div class="autocomplete-wrapper">
+                <input type="text" class="fleet-source" placeholder="Type address..." oninput="fleetAutocomplete(this, 'source')">
+                <ul class="autocomplete-list fleet-source-list"></ul>
+            </div>
+        </div>
+        <div>
+            <label>🏁 Destination</label>
+            <div class="autocomplete-wrapper">
+                <input type="text" class="fleet-dest" placeholder="Type address..." oninput="fleetAutocomplete(this, 'dest')">
+                <ul class="autocomplete-list fleet-dest-list"></ul>
+            </div>
+        </div>
+        <div>
+            <label>🚘 Vehicle Number Plate</label>
+            <input type="text" class="fleet-plate" placeholder="e.g. MH12AB1234">
+        </div>`;
+    document.getElementById('fleet-deliveries').appendChild(div);
+}
+
+async function optimizeFleet() {
+    const rows = document.querySelectorAll('.fleet-row');
+    const vehicle = document.getElementById('fleet-vehicle').value;
+    const cargo = document.getElementById('fleet-cargo').value;
+    if (!cargo) { alert('Please enter cargo weight!'); return; }
+
+    const deliveries = [];
+    rows.forEach(row => {
+        const src = row.querySelector('.fleet-source');
+        const dst = row.querySelector('.fleet-dest');
+        const plate = row.querySelector('.fleet-plate');
+        if (src && dst && src.value && dst.value) {
+            deliveries.push({ source: src.value, destination: dst.value, plate: plate ? plate.value : 'N/A' });
+        }
+    });
+
+    if (deliveries.length === 0) { alert('Please add at least one delivery!'); return; }
+
+    const res = await fetch('/fleet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deliveries, vehicle_type: vehicle, cargo_weight_kg: cargo })
+    });
+
+    const data = await res.json();
+    document.getElementById('fleet-results').style.display = 'block';
+
+    const allCoords = data.deliveries.filter(d => d.source_coords).map(d => d.source_coords);
+    const center = allCoords.length > 0 ? allCoords[0] : [18.5204, 73.8567];
+    const map = initMap('fleet-map-container', center);
+    const colors = ['#74c69d', '#4488ff', '#f4a261', '#e63946', '#b388ff', '#ff80ab'];
+
+    data.deliveries.forEach((d, i) => {
+        const color = colors[i % colors.length];
+        if (d.route_coords && d.route_coords.length > 0) {
+            L.polyline(d.route_coords, { color, weight: 4, opacity: 0.85 })
+             .bindTooltip(`<b>${d.plate || 'D' + d.delivery_no}</b><br>${d.source} → ${d.destination}`)
+             .addTo(map);
+        }
+        if (d.source_coords) {
+            L.marker(d.source_coords, { icon: L.divIcon({ className: '', html: `<div style="background:${color};color:#0f1923;padding:4px 8px;border-radius:6px;font-weight:bold;font-size:11px;">${d.plate || 'D' + d.delivery_no}</div>`, iconAnchor: [20, 10] }) }).addTo(map);
+        }
+        if (d.dest_coords) {
+            L.marker(d.dest_coords, { icon: L.divIcon({ className: '', html: '<div style="background:#e63946;color:white;padding:4px 8px;border-radius:6px;font-weight:bold;font-size:11px;">🏁</div>', iconAnchor: [10, 10] }) }).addTo(map);
+        }
+    });
+
+    let html = '';
+    data.deliveries.forEach(d => {
+        html += `<tr>
+            <td>${d.delivery_no}</td>
+            <td><b style="color:#74c69d;">${d.plate || 'N/A'}</b></td>
+            <td>${d.source}</td><td>${d.destination}</td>
+            <td>${d.distance_km}</td><td>${d.fuel_consumed_liters}</td><td>${d.carbon_emission_kg}</td>
+        </tr>`;
+    });
+    document.getElementById('fleet-table-body').innerHTML = html;
+    document.getElementById('fleet-total-emission').textContent = data.total_emission;
+    document.getElementById('fleet-total-fuel').textContent = data.total_fuel;
+    document.getElementById('fleet-trees').textContent = data.trees_equivalent;
+}
+
+// ========== CHATBOT ==========
+function toggleChat() {
+    document.getElementById('chatbot-window').classList.toggle('open');
+}
+
+let chatHistory = [];
+
+async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    addMessage(message, 'user');
+    chatHistory.push({ role: 'user', content: message });
+    input.value = '';
+
+    const typing = document.createElement('div');
+    typing.className = 'msg bot';
+    typing.id = 'typing-indicator';
+    typing.innerHTML = '<span style="animation: pulse 1s infinite">💭 Thinking...</span>';
+    document.getElementById('chatbot-messages').appendChild(typing);
+    document.getElementById('chatbot-messages').scrollTop = 99999;
+
+    try {
+        const res = await fetch('/chatbot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, history: chatHistory })
+        });
+        const data = await res.json();
+
+        document.getElementById('typing-indicator')?.remove();
+        addMessage(data.reply, 'bot');
+        chatHistory.push({ role: 'assistant', content: data.reply });
+
+        if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+
+    } catch(e) {
+        document.getElementById('typing-indicator')?.remove();
+        addMessage('Sorry, something went wrong. Please try again!', 'bot');
+    }
+}
+
+
+function sendSuggestion(text) {
+    document.getElementById('chat-input').value = text;
+    sendMessage();
+}
+
+function addMessage(text, type, id = '') {
+    const messages = document.getElementById('chatbot-messages');
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    if (id) div.id = id;
+    div.textContent = text;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+
+// ========== VEHICLE RECOMMENDATION ==========
+async function recommendVehicle() {
+    const distance = document.getElementById('rec-distance').value;
+    const cargo = document.getElementById('rec-cargo').value;
+    const priority = document.getElementById('rec-priority').value;
+    if (!distance || !cargo) { alert('Please fill all fields!'); return; }
+
+    const res = await fetch('/recommend-vehicle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ distance_km: distance, cargo_weight_kg: cargo, priority })
+    });
+    const data = await res.json();
+    document.getElementById('rec-results').style.display = 'block';
+
+    const icons = { bike: '🏍️', car: '🚗', van: '🚐', truck: '🚚' };
+    let html = '';
+    data.vehicles.forEach(v => {
+        const isRec = v.recommended;
+        html += `
+            <div class="route-card ${isRec ? 'recommended' : ''}">
+                ${isRec ? '<div class="badge">✅ Best Choice</div>' : ''}
+                <h3>${icons[v.vehicle] || '🚗'} ${v.vehicle.toUpperCase()} <span class="grade-badge grade-${v.grade}">${v.grade}</span></h3>
+                <p>Fuel: <span>${v.fuel_liters} L</span></p>
+                <p>CO2: <span class="${isRec ? 'emission-low' : 'emission-high'}">${v.emission_kg} kg</span></p>
+                <p>Cost: <span>₹${v.fuel_cost_inr}</span></p>
+                <p>Time: <span>${v.time_hours} hrs</span></p>
+            </div>`;
+    });
+    document.getElementById('rec-cards').innerHTML = html;
+}
+
+// ========== CARBON OFFSET ==========
+async function calculateOffset() {
+    const emission = document.getElementById('offset-emission').value;
+    if (!emission) { alert('Please enter emission value!'); return; }
+
+    const res = await fetch('/carbon-offset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emission_kg: emission })
+    });
+    const data = await res.json();
+    document.getElementById('offset-results').style.display = 'block';
+    document.getElementById('offset-cost-inr').textContent = '₹' + data.offset_cost_inr;
+    document.getElementById('offset-cost-usd').textContent = '$' + data.offset_cost_usd;
+    document.getElementById('offset-trees').textContent = data.trees_needed;
+    document.getElementById('offset-km').textContent = data.km_car_avoided;
+    document.getElementById('offset-bulbs').textContent = data.led_bulbs_hours;
+}
+
+// ========== EV SIMULATOR ==========
+async function evSimulator() {
+    const distance = document.getElementById('ev-distance').value;
+    const cargo = document.getElementById('ev-cargo').value;
+    const vehicle = document.getElementById('ev-vehicle').value;
+    if (!distance || !cargo) { alert('Please fill all fields!'); return; }
+
+    const res = await fetch('/ev-simulator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ distance_km: distance, cargo_weight_kg: cargo, vehicle_type: vehicle })
+    });
+    const data = await res.json();
+    document.getElementById('ev-results').style.display = 'block';
+    document.getElementById('ev-current-fuel').textContent = data.current_fuel_liters;
+    document.getElementById('ev-current-emission').textContent = data.current_emission_kg;
+    document.getElementById('ev-current-cost').textContent = data.current_cost_inr;
+    document.getElementById('ev-energy').textContent = data.ev_energy_kwh;
+    document.getElementById('ev-emission').textContent = data.ev_emission_kg;
+    document.getElementById('ev-cost').textContent = data.ev_cost_inr;
+    document.getElementById('ev-saved-emission').textContent = data.emission_saved_kg;
+    document.getElementById('ev-saved-cost').textContent = data.cost_saved_inr;
+    document.getElementById('ev-percent').textContent = data.percent_reduction;
+
+    Plotly.newPlot('ev-chart', [
+        { x: ['Current Vehicle', 'Electric Vehicle'], y: [data.current_emission_kg, data.ev_emission_kg], type: 'bar', marker: { color: ['#e63946', '#74c69d'] }, name: 'CO2 (kg)' }
+    ], {
+        title: 'CO2 Comparison: Current vs EV',
+        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+        font: { color: '#fff' }, margin: { t: 40 }
+    });
+}
+
+// ========== LANGUAGE ==========
+let isHindi = false;
+const translations = {
+    en: {
+        'Enter Delivery Details': '📦 Enter Delivery Details',
+        'Source Location': '📍 Source Location',
+        'Destination Location': '🏁 Destination Location',
+        'Vehicle Type': '🚗 Vehicle Type',
+        'Cargo Weight (kg)': '⚖️ Cargo Weight (kg)',
+        'Analyze Routes': '🔍 Analyze Routes',
+        'Journey Overview & Satellite Map': '🗺️ Journey Overview & Satellite Map',
+        'Route Comparison': '🛣️ Route Comparison',
+        'Analytics': '📊 Analytics',
+        'Sustainability Impact Report': '📋 Sustainability Impact Report',
+        'Delivery History': '🕘 Delivery History',
+        'Multi-Delivery Fleet Optimizer': '🚛 Multi-Delivery Fleet Optimizer'
+    },
+    hi: {
+        'Enter Delivery Details': '📦 डिलीवरी विवरण दर्ज करें',
+        'Source Location': '📍 स्रोत स्थान',
+        'Destination Location': '🏁 गंतव्य स्थान',
+        'Vehicle Type': '🚗 वाहन प्रकार',
+        'Cargo Weight (kg)': '⚖️ माल वजन (किग्रा)',
+        'Analyze Routes': '🔍 मार्ग विश्लेषण करें',
+        'Journey Overview & Satellite Map': '🗺️ यात्रा अवलोकन और मानचित्र',
+        'Route Comparison': '🛣️ मार्ग तुलना',
+        'Analytics': '📊 विश्लेषण',
+        'Sustainability Impact Report': '📋 स्थिरता प्रभाव रिपोर्ट',
+        'Delivery History': '🕘 डिलीवरी इतिहास',
+        'Multi-Delivery Fleet Optimizer': '🚛 बहु-डिलीवरी फ्लीट अनुकूलक'
+    }
+};
+
+function toggleLanguage() {
+    isHindi = !isHindi;
+    const lang = isHindi ? 'hi' : 'en';
+    const btn = document.getElementById('lang-toggle');
+    btn.textContent = isHindi ? '🇬🇧 English' : '🇮🇳 हिंदी';
+
+    document.querySelectorAll('h2, label, .btn-analyze, .card h2').forEach(el => {
+        const text = el.textContent.trim();
+        const t = translations[lang];
+        Object.keys(t).forEach(key => {
+            if (el.textContent.includes(translations['en'][key].replace(/^[^\s]+\s/, '')) ||
+                el.textContent.includes(translations['hi'][key].replace(/^[^\s]+\s/, ''))) {
+                el.textContent = t[key];
+            }
+        });
+    });
+}
+
+// ========== VOICE ASSISTANT ==========
+let recognition = null;
+let isListening = false;
+let voiceCommandsVisible = false;
+
+function initVoice() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        document.getElementById('voice-btn').style.display = 'none';
+        return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-IN';
+
+    recognition.onstart = () => {
+        isListening = true;
+        document.getElementById('voice-btn').classList.add('listening');
+        document.getElementById('voice-btn').textContent = '🔴';
+        showVoiceToast('🎤 Listening...', 'Speak now...');
+    };
+
+    recognition.onresult = async (event) => {
+        const command = event.results[0][0].transcript;
+        showVoiceToast('💬 Heard', command);
+
+        const res = await fetch('/voice-command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command })
+        });
+        const data = await res.json();
+        handleVoiceAction(data);
+    };
+
+    recognition.onerror = () => {
+        stopVoice();
+        showVoiceToast('❌ Error', 'Could not hear. Try again!');
+    };
+
+    recognition.onend = () => { stopVoice(); };
+}
+
+function toggleVoice() {
+    if (isListening) {
+        stopVoice();
+    } else {
+        startVoice();
+    }
+}
+
+function startVoice() {
+    if (!recognition) { initVoice(); }
+    if (!recognition) return;
+    recognition.start();
+}
+
+function stopVoice() {
+    isListening = false;
+    document.getElementById('voice-btn').classList.remove('listening');
+    document.getElementById('voice-btn').textContent = '🎤';
+    if (recognition) { try { recognition.stop(); } catch(e) {} }
+}
+
+function showVoiceToast(title, text) {
+    const toast = document.getElementById('voice-toast');
+    document.getElementById('voice-toast-title').textContent = title;
+    document.getElementById('voice-toast-text').textContent = text;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+function handleVoiceAction(data) {
+    speak(data.message);
+    showVoiceToast('✅ ' + data.action, data.message);
+
+    if (data.action === 'navigate') {
+        const pages = { home: 0, report: 1, history: 2, fleet: 3, tools: 4 };
+        const btns = document.querySelectorAll('.nav-btn');
+        const pageIdx = pages[data.data.page];
+        if (pageIdx !== undefined && btns[pageIdx]) {
+            btns[pageIdx].click();
+        }
+    } else if (data.action === 'theme') {
+        const isLight = document.body.classList.contains('light');
+        if (data.data.theme === 'dark' && isLight) toggleTheme();
+        if (data.data.theme === 'light' && !isLight) toggleTheme();
+    } else if (data.action === 'language') {
+        const shouldBeHindi = data.data.lang === 'hi';
+        if (shouldBeHindi !== isHindi) toggleLanguage();
+    } else if (data.action === 'fill_route') {
+        document.getElementById('source').value = data.data.source;
+        document.getElementById('destination').value = data.data.destination;
+        showPage('home', document.querySelectorAll('.nav-btn')[0]);
+    }
+}
+
+function speak(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+// Right click voice button to show commands
+document.addEventListener('DOMContentLoaded', () => {
+    initVoice();
+    const voiceBtn = document.getElementById('voice-btn');
+    if (voiceBtn) {
+        voiceBtn.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            voiceCommandsVisible = !voiceCommandsVisible;
+            document.getElementById('voice-commands').style.display = voiceCommandsVisible ? 'block' : 'none';
+        });
+    }
+});
+
+</script>
+
+<!-- CHATBOT -->
+ <!-- VOICE ASSISTANT -->
+<button class="voice-btn" id="voice-btn" onclick="toggleVoice()" title="Voice Assistant">🎤</button>
+
+<div class="voice-toast" id="voice-toast">
+    <h4 id="voice-toast-title">🎤 Listening...</h4>
+    <p id="voice-toast-text">Say a command...</p>
+</div>
+
+<div class="voice-commands" id="voice-commands">
+    <h4>🎤 Voice Commands</h4>
+    <ul>
+        <li><span>"Open map"</span> — Go to home</li>
+        <li><span>"Open report"</span> — View report</li>
+        <li><span>"Open history"</span> — View history</li>
+        <li><span>"Open fleet"</span> — Fleet optimizer</li>
+        <li><span>"Open tools"</span> — Tools page</li>
+        <li><span>"Dark mode"</span> — Switch theme</li>
+        <li><span>"Light mode"</span> — Switch theme</li>
+        <li><span>"Hindi"</span> — Switch language</li>
+        <li><span>"Show stats"</span> — Your statistics</li>
+        <li><span>"Find route from X to Y"</span> — Auto fill</li>
+        <li><span>"Help"</span> — List commands</li>
+    </ul>
+</div>
+<div class="chatbot-bubble">
+    <button class="chatbot-btn" onclick="toggleChat()">🤖</button>
+</div>
+
+<div class="chatbot-window" id="chatbot-window">
+    <div class="chatbot-header">
+        <div>
+            <h3>🤖 Carbon Logistics Assistant</h3>
+            <small style="color:#b7e4c7; font-size:11px;">Ask me anything about your deliveries!</small>
+        </div>
+        <button class="chatbot-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chatbot-messages" id="chatbot-messages">
+        <div class="msg bot">👋 Hi! I'm your Carbon Logistics Assistant! Ask me about emissions, routes, vehicles, or sustainability tips!</div>
+    </div>
+    <div class="chat-suggestions">
+        <span class="chat-suggestion" onclick="sendSuggestion('Show my stats')">📊 My stats</span>
+        <span class="chat-suggestion" onclick="sendSuggestion('Give me sustainability tips')">💡 Tips</span>
+        <span class="chat-suggestion" onclick="sendSuggestion('Best vehicle for delivery')">🚗 Vehicle</span>
+        <span class="chat-suggestion" onclick="sendSuggestion('Tell me about EV')">⚡ EV info</span>
+    </div>
+    <div class="chatbot-input">
+        <input type="text" id="chat-input" placeholder="Ask me anything..." onkeydown="if(event.key==='Enter') sendMessage()">
+        <button class="chatbot-send" onclick="sendMessage()">➤</button>
+    </div>
+</div>
+</body>
+</html>

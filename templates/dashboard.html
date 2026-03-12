@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Dashboard - Carbon Logistics</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f1923; color: #fff; }
+        header { background: linear-gradient(135deg, #1a472a, #2d6a4f); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { font-size: 22px; color: #74c69d; }
+        header p { font-size: 13px; color: #b7e4c7; }
+        .back-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #74c69d; background: transparent; color: #74c69d; cursor: pointer; font-size: 13px; text-decoration: none; }
+        .back-btn:hover { background: #74c69d; color: #0f1923; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+
+        /* KPI CARDS */
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .kpi-card { background: #1a2634; border-radius: 12px; padding: 25px; border: 1px solid #2d3f50; position: relative; overflow: hidden; transition: 0.3s; }
+        .kpi-card:hover { transform: translateY(-3px); border-color: #74c69d; }
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(135deg, #1a472a, #74c69d); }
+        .kpi-icon { font-size: 32px; margin-bottom: 10px; }
+        .kpi-value { font-size: 32px; font-weight: 800; color: #74c69d; }
+        .kpi-label { font-size: 13px; color: #a0b4c4; margin-top: 5px; }
+        .kpi-change { font-size: 12px; color: #74c69d; margin-top: 8px; }
+
+        /* CARBON SCORE */
+        .score-section { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 25px; }
+        .score-card { background: #1a2634; border-radius: 12px; padding: 25px; border: 1px solid #2d3f50; text-align: center; }
+        .score-card h2 { color: #74c69d; font-size: 16px; margin-bottom: 20px; }
+        .score-circle { width: 160px; height: 160px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; flex-direction: column; position: relative; }
+        .score-circle svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+        .score-number { font-size: 42px; font-weight: 800; color: #74c69d; position: relative; z-index: 1; }
+        .score-label { font-size: 13px; color: #a0b4c4; position: relative; z-index: 1; }
+        .score-grade { font-size: 24px; font-weight: bold; margin-top: 10px; }
+
+        /* GRADE BREAKDOWN */
+        .grade-card { background: #1a2634; border-radius: 12px; padding: 25px; border: 1px solid #2d3f50; }
+        .grade-card h2 { color: #74c69d; font-size: 16px; margin-bottom: 20px; }
+        .grade-bar { margin-bottom: 20px; }
+        .grade-bar-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+        .grade-bar-track { height: 12px; background: #0f1923; border-radius: 6px; overflow: hidden; }
+        .grade-bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease; }
+        .fill-a { background: linear-gradient(90deg, #74c69d, #52b788); }
+        .fill-b { background: linear-gradient(90deg, #f4a261, #e76f51); }
+        .fill-c { background: linear-gradient(90deg, #e63946, #c1121f); }
+
+        /* CHARTS GRID */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .chart-card { background: #1a2634; border-radius: 12px; padding: 25px; border: 1px solid #2d3f50; }
+        .chart-card h2 { color: #74c69d; font-size: 16px; margin-bottom: 15px; }
+
+        /* VEHICLE TABLE */
+        .table-card { background: #1a2634; border-radius: 12px; padding: 25px; border: 1px solid #2d3f50; margin-bottom: 25px; }
+        .table-card h2 { color: #74c69d; font-size: 16px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0f1923; color: #74c69d; padding: 12px; text-align: left; font-size: 13px; }
+        td { padding: 12px; border-bottom: 1px solid #2d3f50; font-size: 13px; color: #a0b4c4; }
+        tr:hover td { background: rgba(116,198,157,0.05); }
+
+        /* ENVIRONMENTAL IMPACT */
+        .impact-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
+        .impact-card { background: #1a2634; border-radius: 12px; padding: 25px; border: 1px solid #2d3f50; text-align: center; }
+        .impact-icon { font-size: 48px; margin-bottom: 15px; }
+        .impact-value { font-size: 28px; font-weight: 800; color: #74c69d; }
+        .impact-label { font-size: 13px; color: #a0b4c4; margin-top: 8px; }
+
+        .loading { text-align: center; padding: 60px; color: #74c69d; font-size: 18px; }
+        .spinner { width: 50px; height: 50px; border: 4px solid #2d3f50; border-top: 4px solid #74c69d; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>📊 Executive Dashboard</h1>
+        <p>Complete overview of your carbon logistics performance</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a href="/download-report" class="back-btn">⬇️ PDF Report</a>
+        <a href="/app" class="back-btn">← Back to App</a>
+    </div>
+</header>
+
+<div class="container">
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Loading dashboard data...</p>
+    </div>
+
+    <div id="dashboard-content" style="display:none;">
+
+        <!-- KPI CARDS -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon">📦</div>
+                <div class="kpi-value" id="kpi-deliveries">-</div>
+                <div class="kpi-label">Total Deliveries</div>
+                <div class="kpi-change">✅ All time</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">💨</div>
+                <div class="kpi-value" id="kpi-emission">-</div>
+                <div class="kpi-label">Total CO2 (kg)</div>
+                <div class="kpi-change">🌿 Carbon tracked</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">⛽</div>
+                <div class="kpi-value" id="kpi-fuel">-</div>
+                <div class="kpi-label">Total Fuel (L)</div>
+                <div class="kpi-change">📊 Fuel consumed</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">📈</div>
+                <div class="kpi-value" id="kpi-avg">-</div>
+                <div class="kpi-label">Avg CO2/Delivery (kg)</div>
+                <div class="kpi-change">🎯 Efficiency metric</div>
+            </div>
+        </div>
+
+        <!-- CARBON SCORE + GRADE BREAKDOWN -->
+        <div class="score-section">
+            <div class="score-card">
+                <h2>🌿 Carbon Health Score</h2>
+                <div class="score-circle">
+                    <svg width="160" height="160" viewBox="0 0 160 160">
+                        <circle cx="80" cy="80" r="70" fill="none" stroke="#2d3f50" stroke-width="12"/>
+                        <circle cx="80" cy="80" r="70" fill="none" stroke="#74c69d" stroke-width="12"
+                            stroke-dasharray="440" id="score-circle-fill" stroke-dashoffset="440"
+                            stroke-linecap="round"/>
+                    </svg>
+                    <div class="score-number" id="score-number">-</div>
+                    <div class="score-label">/ 100</div>
+                </div>
+                <div class="score-grade" id="score-grade">-</div>
+                <p style="color:#a0b4c4; font-size:13px; margin-top:10px;" id="score-desc">-</p>
+            </div>
+
+            <div class="grade-card">
+                <h2>📊 Delivery Grade Breakdown</h2>
+                <div class="grade-bar">
+                    <div class="grade-bar-label">
+                        <span>🟢 Grade A (Excellent) — CO2 &lt; 0.5 kg</span>
+                        <span id="grade-a-count">-</span>
+                    </div>
+                    <div class="grade-bar-track">
+                        <div class="grade-bar-fill fill-a" id="grade-a-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="grade-bar">
+                    <div class="grade-bar-label">
+                        <span>🟡 Grade B (Good) — CO2 0.5-1.5 kg</span>
+                        <span id="grade-b-count">-</span>
+                    </div>
+                    <div class="grade-bar-track">
+                        <div class="grade-bar-fill fill-b" id="grade-b-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="grade-bar">
+                    <div class="grade-bar-label">
+                        <span>🔴 Grade C (Needs Work) — CO2 &gt; 1.5 kg</span>
+                        <span id="grade-c-count">-</span>
+                    </div>
+                    <div class="grade-bar-track">
+                        <div class="grade-bar-fill fill-c" id="grade-c-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div id="grade-chart" style="margin-top:20px;"></div>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2>📈 Daily CO2 Trend (Last 14 Days)</h2>
+                <div id="trend-chart"></div>
+            </div>
+            <div class="chart-card">
+                <h2>🚗 Emissions by Vehicle Type</h2>
+                <div id="vehicle-chart"></div>
+            </div>
+        </div>
+
+        <!-- VEHICLE TABLE -->
+        <div class="table-card">
+            <h2>🚛 Vehicle Performance Summary</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vehicle</th>
+                        <th>Deliveries</th>
+                        <th>Total CO2 (kg)</th>
+                        <th>Total Fuel (L)</th>
+                        <th>Avg CO2/Trip</th>
+                        <th>Efficiency Grade</th>
+                    </tr>
+                </thead>
+                <tbody id="vehicle-table"></tbody>
+            </table>
+        </div>
+
+        <!-- ENVIRONMENTAL IMPACT -->
+        <div class="impact-grid">
+            <div class="impact-card">
+                <div class="impact-icon">🌳</div>
+                <div class="impact-value" id="impact-trees">-</div>
+                <div class="impact-label">Trees needed to offset emissions</div>
+            </div>
+            <div class="impact-card">
+                <div class="impact-icon">🚗</div>
+                <div class="impact-value" id="impact-km">-</div>
+                <div class="impact-label">km of car driving equivalent</div>
+            </div>
+            <div class="impact-card">
+                <div class="impact-icon">💡</div>
+                <div class="impact-value" id="impact-bulbs">-</div>
+                <div class="impact-label">LED bulb hours equivalent</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+async function loadDashboard() {
+    const res = await fetch('/dashboard-data');
+    const d = await res.json();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('dashboard-content').style.display = 'block';
+
+    // KPIs
+    document.getElementById('kpi-deliveries').textContent = d.total_deliveries;
+    document.getElementById('kpi-emission').textContent = d.total_emission;
+    document.getElementById('kpi-fuel').textContent = d.total_fuel;
+    document.getElementById('kpi-avg').textContent = d.avg_emission;
+
+    // Carbon Score
+    const score = d.carbon_score;
+    document.getElementById('score-number').textContent = score;
+    const circumference = 440;
+    const offset = circumference - (score / 100) * circumference;
+    setTimeout(() => {
+        document.getElementById('score-circle-fill').style.transition = 'stroke-dashoffset 1.5s ease';
+        document.getElementById('score-circle-fill').style.strokeDashoffset = offset;
+    }, 300);
+
+    let grade, gradeColor, desc;
+    if (score >= 80) { grade = '🌿 Excellent'; gradeColor = '#74c69d'; desc = 'Your fleet is highly eco-friendly! Keep it up!'; }
+    else if (score >= 60) { grade = '👍 Good'; gradeColor = '#f4a261'; desc = 'Good performance! Room for improvement.'; }
+    else { grade = '⚠️ Needs Work'; gradeColor = '#e63946'; desc = 'Consider switching to bikes or EVs for short routes.'; }
+    document.getElementById('score-grade').textContent = grade;
+    document.getElementById('score-grade').style.color = gradeColor;
+    document.getElementById('score-desc').textContent = desc;
+
+    // Grade bars
+    const total = d.total_deliveries || 1;
+    document.getElementById('grade-a-count').textContent = d.grade_a + ' deliveries';
+    document.getElementById('grade-b-count').textContent = d.grade_b + ' deliveries';
+    document.getElementById('grade-c-count').textContent = d.grade_c + ' deliveries';
+    setTimeout(() => {
+        document.getElementById('grade-a-bar').style.width = (d.grade_a / total * 100) + '%';
+        document.getElementById('grade-b-bar').style.width = (d.grade_b / total * 100) + '%';
+        document.getElementById('grade-c-bar').style.width = (d.grade_c / total * 100) + '%';
+    }, 300);
+
+    // Grade pie chart
+    Plotly.newPlot('grade-chart', [{
+        values: [d.grade_a, d.grade_b, d.grade_c],
+        labels: ['Grade A', 'Grade B', 'Grade C'],
+        type: 'pie',
+        marker: { colors: ['#74c69d', '#f4a261', '#e63946'] },
+        hole: 0.4
+    }], {
+        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+        font: { color: '#fff' }, margin: { t: 10, b: 10, l: 10, r: 10 },
+        showlegend: true, legend: { font: { color: '#fff' } }
+    });
+
+    // Trend chart
+    if (d.weekly_data && d.weekly_data.length > 0) {
+        Plotly.newPlot('trend-chart', [{
+            x: d.weekly_data.map(w => w.date),
+            y: d.weekly_data.map(w => w.emission),
+            type: 'scatter', mode: 'lines+markers',
+            line: { color: '#74c69d', width: 3 },
+            marker: { color: '#74c69d', size: 8 },
+            fill: 'tozeroy', fillcolor: 'rgba(116,198,157,0.1)'
+        }], {
+            paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+            font: { color: '#fff' }, margin: { t: 10, b: 40, l: 40, r: 10 },
+            xaxis: { gridcolor: '#2d3f50' }, yaxis: { gridcolor: '#2d3f50' }
+        });
+    }
+
+    // Vehicle chart
+    if (d.vehicle_stats) {
+        const vehicles = Object.keys(d.vehicle_stats);
+        Plotly.newPlot('vehicle-chart', [{
+            x: vehicles,
+            y: vehicles.map(v => Math.round(d.vehicle_stats[v].emission * 10000) / 10000),
+            type: 'bar',
+            marker: { color: ['#74c69d', '#4488ff', '#f4a261', '#e63946'] },
+            text: vehicles.map(v => d.vehicle_stats[v].count + ' trips'),
+            textposition: 'auto'
+        }], {
+            paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+            font: { color: '#fff' }, margin: { t: 10, b: 40, l: 40, r: 10 },
+            xaxis: { gridcolor: '#2d3f50' }, yaxis: { gridcolor: '#2d3f50', title: 'CO2 (kg)' }
+        });
+    }
+
+    // Vehicle table
+    let tableHTML = '';
+    if (d.vehicle_stats) {
+        Object.keys(d.vehicle_stats).forEach(v => {
+            const stats = d.vehicle_stats[v];
+            const avgCO2 = Math.round(stats.emission / stats.count * 10000) / 10000;
+            const grade = avgCO2 < 0.5 ? '<span style="color:#74c69d; font-weight:bold;">A ✅</span>' :
+                          avgCO2 < 1.5 ? '<span style="color:#f4a261; font-weight:bold;">B 👍</span>' :
+                          '<span style="color:#e63946; font-weight:bold;">C ⚠️</span>';
+            const icons = { bike: '🏍️', car: '🚗', van: '🚐', truck: '🚚' };
+            tableHTML += `<tr>
+                <td>${icons[v] || '🚗'} ${v.toUpperCase()}</td>
+                <td>${stats.count}</td>
+                <td>${Math.round(stats.emission * 10000) / 10000}</td>
+                <td>${Math.round(stats.fuel * 100) / 100}</td>
+                <td>${avgCO2}</td>
+                <td>${grade}</td>
+            </tr>`;
+        });
+    }
+    document.getElementById('vehicle-table').innerHTML = tableHTML || '<tr><td colspan="6" style="text-align:center;">No data yet</td></tr>';
+
+    // Environmental impact
+    document.getElementById('impact-trees').textContent = d.trees_saved;
+    document.getElementById('impact-km').textContent = Math.round(d.total_emission / 0.21);
+    document.getElementById('impact-bulbs').textContent = Math.round(d.total_emission * 1.2);
+}
+
+loadDashboard();
+</script>
+
+</body>
+</html>

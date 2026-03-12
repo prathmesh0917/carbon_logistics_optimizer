@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive Analytics - Carbon Logistics</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f1923; color: #fff; }
+        header { background: linear-gradient(135deg, #1a472a, #2d6a4f); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { font-size: 22px; color: #74c69d; }
+        header p { font-size: 13px; color: #b7e4c7; }
+        .back-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #74c69d; background: transparent; color: #74c69d; cursor: pointer; font-size: 13px; text-decoration: none; }
+        .back-btn:hover { background: #74c69d; color: #0f1923; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        .card { background: #1a2634; border-radius: 12px; padding: 25px; margin-bottom: 25px; border: 1px solid #2d3f50; }
+        .card h2 { color: #74c69d; font-size: 16px; margin-bottom: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+        .kpi-card { background: #1a2634; border-radius: 12px; padding: 20px; border: 1px solid #2d3f50; text-align: center; transition: 0.3s; }
+        .kpi-card:hover { border-color: #74c69d; transform: translateY(-3px); }
+        .kpi-icon { font-size: 28px; margin-bottom: 8px; }
+        .kpi-value { font-size: 26px; font-weight: 800; color: #74c69d; }
+        .kpi-label { font-size: 12px; color: #a0b4c4; margin-top: 5px; }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 25px; }
+        .insight-card { background: #1a2634; border-radius: 12px; padding: 20px; border: 1px solid #2d3f50; }
+        .insight-card h3 { color: #74c69d; font-size: 14px; margin-bottom: 12px; }
+        .insight-card p { color: #a0b4c4; font-size: 13px; line-height: 1.6; }
+        .insight-card span { color: #fff; font-weight: bold; }
+        .vehicle-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .vehicle-card { background: #1a2634; border-radius: 12px; padding: 20px; border: 1px solid #2d3f50; text-align: center; transition: 0.3s; }
+        .vehicle-card.best { border-color: #74c69d; box-shadow: 0 0 20px rgba(116,198,157,0.2); }
+        .vehicle-card h3 { font-size: 28px; margin-bottom: 8px; }
+        .vehicle-card h4 { font-size: 14px; color: #74c69d; margin-bottom: 8px; }
+        .vehicle-card p { font-size: 13px; color: #a0b4c4; }
+        .vehicle-card .avg { font-size: 22px; font-weight: 800; color: #74c69d; margin: 8px 0; }
+        .best-badge { background: #74c69d; color: #0f1923; font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
+        .loading { text-align: center; padding: 60px; color: #74c69d; }
+        .spinner { width: 50px; height: 50px; border: 4px solid #2d3f50; border-top: 4px solid #74c69d; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-msg { text-align: center; padding: 60px; color: #e63946; font-size: 18px; }
+        .tip-box { background: rgba(116,198,157,0.1); border: 1px solid rgba(116,198,157,0.3); border-radius: 10px; padding: 15px; margin-top: 15px; }
+        .tip-box p { color: #74c69d; font-size: 13px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>📈 Predictive Analytics</h1>
+        <p>AI-powered forecasting for future carbon emissions and fuel consumption</p>
+    </div>
+    <a href="/app" class="back-btn">← Back to App</a>
+</header>
+
+<div class="container">
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Running predictive models...</p>
+    </div>
+
+    <div id="error-section" style="display:none;">
+        <div class="error-msg">
+            <p id="error-msg-text"></p>
+            <a href="/app" style="color:#74c69d; text-decoration:none; font-size:14px; margin-top:15px; display:inline-block;">→ Go make some deliveries first!</a>
+        </div>
+    </div>
+
+    <div id="content" style="display:none;">
+
+        <!-- MONTHLY FORECAST KPIs -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon">📅</div>
+                <div class="kpi-value" id="monthly-emission">-</div>
+                <div class="kpi-label">Predicted Monthly CO2 (kg)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">⛽</div>
+                <div class="kpi-value" id="monthly-fuel">-</div>
+                <div class="kpi-label">Predicted Monthly Fuel (L)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-value" id="monthly-cost">-</div>
+                <div class="kpi-label">Predicted Monthly Cost (₹)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">🌳</div>
+                <div class="kpi-value" id="trees-needed">-</div>
+                <div class="kpi-label">Trees Needed to Offset</div>
+            </div>
+        </div>
+
+        <!-- FORECAST CHARTS -->
+        <div class="charts-grid">
+            <div class="card">
+                <h2>📈 CO2 Forecast — Historical + Next 7 Days</h2>
+                <div id="emission-forecast-chart"></div>
+            </div>
+            <div class="card">
+                <h2>⛽ Fuel Forecast — Historical + Next 7 Days</h2>
+                <div id="fuel-forecast-chart"></div>
+            </div>
+        </div>
+
+        <!-- VEHICLE RECOMMENDATION -->
+        <div class="card">
+            <h2>🚗 Vehicle Efficiency Analysis & Recommendation</h2>
+            <div class="vehicle-grid" id="vehicle-cards"></div>
+        </div>
+
+        <!-- INSIGHTS -->
+        <div class="insight-grid">
+            <div class="insight-card">
+                <h3>📊 Daily Average</h3>
+                <p>Average daily CO2: <span id="avg-daily-emission">-</span> kg</p>
+                <p>Average daily deliveries: <span id="avg-daily-count">-</span></p>
+                <div class="tip-box">
+                    <p>💡 Based on your delivery patterns, we predict consistent emission levels. Use Highway routes to reduce this!</p>
+                </div>
+            </div>
+            <div class="insight-card">
+                <h3>💰 Savings Potential</h3>
+                <p>By switching to the most eco-friendly vehicle, you could save:</p>
+                <p style="font-size:28px; font-weight:800; color:#74c69d; margin:10px 0;" id="savings-potential">-</p>
+                <p>kg CO2 per month</p>
+                <div class="tip-box">
+                    <p>💡 Consider using bikes for short city deliveries to maximize savings!</p>
+                </div>
+            </div>
+            <div class="insight-card">
+                <h3>🎯 AI Recommendation</h3>
+                <p>Best vehicle for your routes: <span id="best-vehicle-rec">-</span></p>
+                <div class="tip-box" style="margin-top:10px;">
+                    <p id="ai-recommendation-text">-</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+async function loadPredictive() {
+    const res = await fetch('/predictive-data');
+    const d = await res.json();
+
+    document.getElementById('loading').style.display = 'none';
+
+    if (d.error) {
+        document.getElementById('error-section').style.display = 'block';
+        document.getElementById('error-msg-text').textContent = d.error;
+        return;
+    }
+
+    document.getElementById('content').style.display = 'block';
+
+    // KPIs
+    document.getElementById('monthly-emission').textContent = d.monthly_emission;
+    document.getElementById('monthly-fuel').textContent = d.monthly_fuel;
+    document.getElementById('monthly-cost').textContent = '₹' + d.monthly_cost;
+    document.getElementById('trees-needed').textContent = d.trees_needed;
+    document.getElementById('avg-daily-emission').textContent = d.avg_daily_emission;
+    document.getElementById('avg-daily-count').textContent = d.avg_daily_count;
+    document.getElementById('savings-potential').textContent = d.savings_potential;
+
+    const icons = { bike: '🏍️ Bike', car: '🚗 Car', van: '🚐 Van', truck: '🚚 Truck' };
+    document.getElementById('best-vehicle-rec').textContent = icons[d.best_vehicle] || d.best_vehicle;
+    document.getElementById('ai-recommendation-text').textContent =
+        `Based on your delivery history, ${d.best_vehicle}s produce the least CO2 emissions on average (${d.vehicle_avg[d.best_vehicle]} kg/trip). Switch more deliveries to this vehicle type to reduce your carbon footprint!`;
+
+    // Emission forecast chart
+    Plotly.newPlot('emission-forecast-chart', [
+        {
+            x: d.historical_dates,
+            y: d.historical_emissions,
+            type: 'scatter', mode: 'lines+markers',
+            name: 'Historical',
+            line: { color: '#74c69d', width: 3 },
+            marker: { color: '#74c69d', size: 8 },
+            fill: 'tozeroy', fillcolor: 'rgba(116,198,157,0.1)'
+        },
+        {
+            x: d.future_dates,
+            y: d.future_emissions,
+            type: 'scatter', mode: 'lines+markers',
+            name: 'Predicted',
+            line: { color: '#f4a261', width: 3, dash: 'dot' },
+            marker: { color: '#f4a261', size: 8 }
+        }
+    ], {
+        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+        font: { color: '#fff' }, margin: { t: 10, b: 40, l: 40, r: 10 },
+        xaxis: { gridcolor: '#2d3f50' }, yaxis: { gridcolor: '#2d3f50', title: 'CO2 (kg)' },
+        legend: { font: { color: '#fff' } }
+    });
+
+    // Fuel forecast chart
+    Plotly.newPlot('fuel-forecast-chart', [
+        {
+            x: d.historical_dates,
+            y: d.historical_fuels,
+            type: 'scatter', mode: 'lines+markers',
+            name: 'Historical',
+            line: { color: '#4488ff', width: 3 },
+            marker: { color: '#4488ff', size: 8 },
+            fill: 'tozeroy', fillcolor: 'rgba(68,136,255,0.1)'
+        },
+        {
+            x: d.future_dates,
+            y: d.future_fuels,
+            type: 'scatter', mode: 'lines+markers',
+            name: 'Predicted',
+            line: { color: '#e63946', width: 3, dash: 'dot' },
+            marker: { color: '#e63946', size: 8 }
+        }
+    ], {
+        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+        font: { color: '#fff' }, margin: { t: 10, b: 40, l: 40, r: 10 },
+        xaxis: { gridcolor: '#2d3f50' }, yaxis: { gridcolor: '#2d3f50', title: 'Fuel (L)' },
+        legend: { font: { color: '#fff' } }
+    });
+
+    // Vehicle cards
+    const allVehicles = ['bike', 'car', 'van', 'truck'];
+    const vehicleIcons = { bike: '🏍️', car: '🚗', van: '🚐', truck: '🚚' };
+    let html = '';
+    allVehicles.forEach(v => {
+        const avg = d.vehicle_avg[v];
+        const isBest = v === d.best_vehicle;
+        const grade = avg ? (avg < 0.5 ? 'A' : avg < 1.5 ? 'B' : 'C') : '-';
+        const gradeColor = grade === 'A' ? '#74c69d' : grade === 'B' ? '#f4a261' : '#e63946';
+        html += `
+            <div class="vehicle-card ${isBest ? 'best' : ''}">
+                ${isBest ? '<div class="best-badge">✅ Most Eco</div>' : ''}
+                <h3>${vehicleIcons[v]}</h3>
+                <h4>${v.toUpperCase()}</h4>
+                ${avg !== undefined ?
+                    `<div class="avg">${avg} kg</div>
+                     <p>avg CO2/trip</p>
+                     <p style="margin-top:8px; color:${gradeColor}; font-weight:bold;">Grade ${grade}</p>` :
+                    `<div class="avg" style="color:#a0b4c4;">No data</div>
+                     <p>not used yet</p>`
+                }
+            </div>`;
+    });
+    document.getElementById('vehicle-cards').innerHTML = html;
+}
+
+loadPredictive();
+</script>
+
+</body>
+</html>

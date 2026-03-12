@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Score Card</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f1923; color: #fff; }
+        header { background: linear-gradient(135deg, #1a472a, #2d6a4f); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { font-size: 22px; color: #74c69d; }
+        header p { font-size: 13px; color: #b7e4c7; }
+        .back-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #74c69d; background: transparent; color: #74c69d; text-decoration: none; font-size: 13px; }
+        .back-btn:hover { background: #74c69d; color: #0f1923; }
+        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+        .card { background: #1a2634; border-radius: 12px; padding: 25px; margin-bottom: 25px; border: 1px solid #2d3f50; }
+        .card h2 { color: #74c69d; font-size: 16px; margin-bottom: 20px; }
+
+        /* SCORE HERO */
+        .score-hero { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px; }
+        .score-main { background: linear-gradient(135deg, #1a2634, #0f1923); border-radius: 12px; padding: 40px; border: 1px solid #74c69d; text-align: center; box-shadow: 0 0 40px rgba(116,198,157,0.15); }
+        .score-main h2 { color: #74c69d; font-size: 16px; margin-bottom: 30px; }
+        .big-score { font-size: 100px; font-weight: 900; line-height: 1; }
+        .score-A { color: #74c69d; }
+        .score-B { color: #f4a261; }
+        .score-C { color: #e9c46a; }
+        .score-D { color: #e63946; }
+        .score-subtitle { font-size: 20px; color: #a0b4c4; margin-top: 10px; }
+        .score-num { font-size: 48px; font-weight: 800; color: #74c69d; margin-top: 15px; }
+        .score-desc { font-size: 13px; color: #a0b4c4; margin-top: 10px; }
+
+        /* COMPARISON */
+        .comparison-card { background: #1a2634; border-radius: 12px; padding: 30px; border: 1px solid #2d3f50; }
+        .comparison-card h2 { color: #74c69d; font-size: 16px; margin-bottom: 25px; }
+        .comparison-bar { margin-bottom: 20px; }
+        .comparison-bar-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .comparison-bar-track { height: 16px; background: #0f1923; border-radius: 8px; overflow: hidden; position: relative; }
+        .comparison-bar-fill { height: 100%; border-radius: 8px; transition: width 1.5s ease; }
+        .fill-you { background: linear-gradient(90deg, #74c69d, #52b788); }
+        .fill-industry { background: linear-gradient(90deg, #e63946, #c1121f); }
+        .better-badge { display: inline-block; padding: 8px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; margin-top: 15px; }
+        .better-yes { background: rgba(116,198,157,0.2); border: 1px solid #74c69d; color: #74c69d; }
+        .better-no { background: rgba(230,57,70,0.2); border: 1px solid #e63946; color: #e63946; }
+
+        /* BADGES */
+        .badges-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
+        .badge-card { background: #0f1923; border-radius: 12px; padding: 20px; border: 1px solid #2d3f50; text-align: center; transition: 0.3s; }
+        .badge-card.earned { border-color: #74c69d; box-shadow: 0 0 15px rgba(116,198,157,0.2); }
+        .badge-card.locked { opacity: 0.4; filter: grayscale(1); }
+        .badge-icon { font-size: 36px; margin-bottom: 8px; }
+        .badge-name { font-size: 12px; font-weight: bold; color: #74c69d; margin-bottom: 4px; }
+        .badge-desc { font-size: 11px; color: #a0b4c4; }
+
+        /* MONTHLY TREND */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: #1a2634; border-radius: 12px; padding: 20px; border: 1px solid #2d3f50; text-align: center; }
+        .stat-card h3 { font-size: 12px; color: #a0b4c4; margin-bottom: 8px; }
+        .stat-card p { font-size: 26px; font-weight: 800; color: #74c69d; }
+        .stat-card span { font-size: 12px; color: #a0b4c4; }
+
+        .spinner { width: 50px; height: 50px; border: 4px solid #2d3f50; border-top: 4px solid #74c69d; border-radius: 50%; animation: spin 1s linear infinite; margin: 40px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* PRINT */
+        @media print {
+            header { background: #1a472a !important; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>🏆 Carbon Score Card</h1>
+        <p>Your company's carbon performance rating</p>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button class="back-btn" onclick="window.print()">🖨️ Print Card</button>
+        <a href="/app" class="back-btn">← Back</a>
+    </div>
+</header>
+
+<div class="container">
+    <div id="loading" style="text-align:center; padding:60px;">
+        <div class="spinner"></div>
+        <p style="color:#74c69d;">Loading score card...</p>
+    </div>
+
+    <div id="content" style="display:none;">
+
+        <!-- SCORE HERO -->
+        <div class="score-hero">
+            <div class="score-main">
+                <h2>🌿 Your Carbon Grade</h2>
+                <div class="big-score" id="big-grade">-</div>
+                <div class="score-subtitle" id="grade-label">-</div>
+                <div class="score-num" id="score-num">-</div>
+                <div class="score-desc">out of 100 points</div>
+                <p style="color:#a0b4c4; font-size:13px; margin-top:20px;" id="score-message">-</p>
+            </div>
+
+            <div class="comparison-card">
+                <h2>📊 You vs Industry Average</h2>
+                <div class="comparison-bar">
+                    <div class="comparison-bar-label">
+                        <span>🌿 Your Avg CO2/Trip</span>
+                        <span id="your-avg">-</span>
+                    </div>
+                    <div class="comparison-bar-track">
+                        <div class="comparison-bar-fill fill-you" id="your-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="comparison-bar">
+                    <div class="comparison-bar-label">
+                        <span>🏭 Industry Average</span>
+                        <span>1.2 kg</span>
+                    </div>
+                    <div class="comparison-bar-track">
+                        <div class="comparison-bar-fill fill-industry" style="width:100%"></div>
+                    </div>
+                </div>
+                <div id="comparison-badge">-</div>
+                <p style="color:#a0b4c4; font-size:13px; margin-top:15px;" id="comparison-text">-</p>
+            </div>
+        </div>
+
+        <!-- STATS ROW -->
+        <div class="stats-row">
+            <div class="stat-card"><h3>Total Deliveries</h3><p id="sc-deliveries">-</p></div>
+            <div class="stat-card"><h3>Total CO2 (kg)</h3><p id="sc-emission">-</p></div>
+            <div class="stat-card"><h3>Total Fuel (L)</h3><p id="sc-fuel">-</p></div>
+            <div class="stat-card"><h3>🌳 Trees to Offset</h3><p id="sc-trees">-</p></div>
+        </div>
+
+        <!-- MONTHLY SCORE CHART -->
+        <div class="card">
+            <h2>📈 Monthly Carbon Score Trend</h2>
+            <div id="monthly-chart"></div>
+        </div>
+
+        <!-- BADGES -->
+        <div class="card">
+            <h2>🏅 Achievement Badges</h2>
+            <div class="badges-grid" id="badges-grid"></div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+async function loadScoreCard() {
+    const res = await fetch('/scorecard-data');
+    const d = await res.json();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    // Grade
+    const gradeEl = document.getElementById('big-grade');
+    gradeEl.textContent = d.grade;
+    gradeEl.className = `big-score score-${d.grade}`;
+    document.getElementById('grade-label').textContent = d.grade_label;
+    document.getElementById('score-num').textContent = d.carbon_score;
+
+    const messages = {
+        'A': '🎉 Outstanding! Your fleet is a leader in sustainable logistics!',
+        'B': '👍 Good work! A few more improvements and you can reach Grade A!',
+        'C': '📈 Average performance. Switch to bikes/EVs for short routes to improve!',
+        'D': '⚠️ Needs improvement. Consider optimizing routes and vehicle choices!'
+    };
+    document.getElementById('score-message').textContent = messages[d.grade];
+
+    // Comparison
+    document.getElementById('your-avg').textContent = d.avg_emission + ' kg';
+    const barWidth = Math.min(100, (d.avg_emission / d.industry_avg) * 100);
+    setTimeout(() => {
+        document.getElementById('your-bar').style.width = barWidth + '%';
+    }, 300);
+
+    const badge = document.getElementById('comparison-badge');
+    if (d.better_than_industry) {
+        badge.innerHTML = `<span class="better-badge better-yes">✅ ${d.comparison}% Better than Industry Average!</span>`;
+        document.getElementById('comparison-text').textContent = `Amazing! Your fleet emits ${d.comparison}% less CO2 than the industry average of 1.2kg/trip.`;
+    } else {
+        badge.innerHTML = `<span class="better-badge better-no">⚠️ ${Math.abs(d.comparison)}% Above Industry Average</span>`;
+        document.getElementById('comparison-text').textContent = `Your emissions are ${Math.abs(d.comparison)}% above the industry average. Use eco routes to improve!`;
+    }
+
+    // Stats
+    document.getElementById('sc-deliveries').textContent = d.total_deliveries;
+    document.getElementById('sc-emission').textContent = d.total_emission;
+    document.getElementById('sc-fuel').textContent = d.total_fuel;
+    document.getElementById('sc-trees').textContent = d.trees_saved;
+
+    // Monthly chart
+    if (d.monthly_data && d.monthly_data.length > 0) {
+        Plotly.newPlot('monthly-chart', [
+            {
+                x: d.monthly_data.map(m => m.month),
+                y: d.monthly_data.map(m => m.score),
+                type: 'bar',
+                marker: { color: d.monthly_data.map(m => m.score >= 80 ? '#74c69d' : m.score >= 60 ? '#f4a261' : '#e63946') },
+                text: d.monthly_data.map(m => m.score),
+                textposition: 'auto'
+            }
+        ], {
+            paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+            font: { color: '#fff' }, margin: { t: 10, b: 40, l: 40, r: 10 },
+            xaxis: { gridcolor: '#2d3f50' },
+            yaxis: { gridcolor: '#2d3f50', title: 'Score', range: [0, 100] }
+        });
+    }
+
+    // Badges
+    const allBadges = [
+        { icon: '🚀', name: 'First Delivery', desc: 'Make your first delivery' },
+        { icon: '📦', name: 'Delivery Pro', desc: '10+ deliveries completed' },
+        { icon: '🌿', name: 'Eco Warrior', desc: 'Avg emission below 0.5kg' },
+        { icon: '🏆', name: 'Industry Leader', desc: 'Better than industry average' },
+        { icon: '⭐', name: 'Green Champion', desc: 'Carbon score above 80' }
+    ];
+    const earnedNames = d.badges.map(b => b.name);
+    let html = '';
+    allBadges.forEach(b => {
+        const earned = earnedNames.includes(b.name);
+        html += `
+            <div class="badge-card ${earned ? 'earned' : 'locked'}">
+                <div class="badge-icon">${b.icon}</div>
+                <div class="badge-name">${b.name}</div>
+                <div class="badge-desc">${earned ? '✅ Earned!' : '🔒 ' + b.desc}</div>
+            </div>`;
+    });
+    document.getElementById('badges-grid').innerHTML = html;
+}
+
+loadScoreCard();
+</script>
+
+</body>
+</html>

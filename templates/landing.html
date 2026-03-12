@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Logistics Optimizer - AI Powered Green Delivery</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0a1628; color: #fff; overflow-x: hidden; }
+
+        /* NAV */
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 15px 60px; display: flex; align-items: center; justify-content: space-between; background: rgba(10,22,40,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(116,198,157,0.2); }
+        .logo { font-size: 20px; font-weight: bold; color: #74c69d; }
+        .logo span { color: #fff; }
+        .nav-links { display: flex; gap: 30px; align-items: center; }
+        .nav-links a { color: #a0b4c4; text-decoration: none; font-size: 14px; transition: 0.3s; }
+        .nav-links a:hover { color: #74c69d; }
+        .nav-cta { padding: 10px 24px; background: linear-gradient(135deg, #1a472a, #2d6a4f); color: #74c69d; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; border: 1px solid #74c69d; transition: 0.3s; }
+        .nav-cta:hover { background: #74c69d; color: #0a1628; }
+
+        /* HERO */
+        .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 100px 20px 60px; position: relative; overflow: hidden; }
+        .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(116,198,157,0.08) 0%, transparent 70%); }
+        .hero-content { position: relative; z-index: 1; max-width: 800px; }
+        .hero-badge { display: inline-block; padding: 6px 16px; background: rgba(116,198,157,0.1); border: 1px solid rgba(116,198,157,0.3); border-radius: 20px; color: #74c69d; font-size: 13px; margin-bottom: 24px; }
+        .hero h1 { font-size: 56px; font-weight: 800; line-height: 1.1; margin-bottom: 24px; }
+        .hero h1 span { background: linear-gradient(135deg, #74c69d, #2d6a4f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 18px; color: #a0b4c4; margin-bottom: 40px; line-height: 1.7; max-width: 600px; margin-left: auto; margin-right: auto; }
+        .hero-btns { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        .btn-primary { padding: 16px 36px; background: linear-gradient(135deg, #1a472a, #2d6a4f); color: #74c69d; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; border: 1px solid #74c69d; transition: 0.3s; }
+        .btn-primary:hover { background: #74c69d; color: #0a1628; transform: translateY(-2px); }
+        .btn-secondary { padding: 16px 36px; background: transparent; color: #fff; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; border: 1px solid #2d3f50; transition: 0.3s; }
+        .btn-secondary:hover { border-color: #74c69d; color: #74c69d; }
+
+        /* STATS */
+        .stats { padding: 60px 60px; background: rgba(26,38,52,0.5); border-top: 1px solid #2d3f50; border-bottom: 1px solid #2d3f50; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; max-width: 1000px; margin: 0 auto; text-align: center; }
+        .stat h3 { font-size: 42px; font-weight: 800; color: #74c69d; }
+        .stat p { font-size: 14px; color: #a0b4c4; margin-top: 5px; }
+
+        /* FEATURES */
+        .features { padding: 100px 60px; max-width: 1200px; margin: 0 auto; }
+        .section-title { text-align: center; margin-bottom: 60px; }
+        .section-title h2 { font-size: 40px; font-weight: 800; margin-bottom: 15px; }
+        .section-title h2 span { color: #74c69d; }
+        .section-title p { color: #a0b4c4; font-size: 16px; }
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+        .feature-card { background: #1a2634; border-radius: 16px; padding: 30px; border: 1px solid #2d3f50; transition: 0.3s; }
+        .feature-card:hover { border-color: #74c69d; transform: translateY(-5px); box-shadow: 0 20px 40px rgba(116,198,157,0.1); }
+        .feature-icon { font-size: 40px; margin-bottom: 15px; }
+        .feature-card h3 { font-size: 18px; color: #74c69d; margin-bottom: 10px; }
+        .feature-card p { font-size: 14px; color: #a0b4c4; line-height: 1.6; }
+
+        /* HOW IT WORKS */
+        .how { padding: 100px 60px; background: rgba(26,38,52,0.3); }
+        .how-inner { max-width: 1000px; margin: 0 auto; }
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-top: 60px; }
+        .step { text-align: center; padding: 30px; }
+        .step-num { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #1a472a, #2d6a4f); border: 2px solid #74c69d; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; color: #74c69d; margin: 0 auto 20px; }
+        .step h3 { font-size: 16px; color: #fff; margin-bottom: 10px; }
+        .step p { font-size: 13px; color: #a0b4c4; line-height: 1.6; }
+
+        /* TECH STACK */
+        .tech { padding: 80px 60px; max-width: 1000px; margin: 0 auto; text-align: center; }
+        .tech-badges { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 40px; }
+        .tech-badge { padding: 10px 20px; background: #1a2634; border: 1px solid #2d3f50; border-radius: 8px; font-size: 14px; color: #a0b4c4; transition: 0.3s; }
+        .tech-badge:hover { border-color: #74c69d; color: #74c69d; }
+
+        /* CTA */
+        .cta { padding: 100px 60px; text-align: center; background: radial-gradient(ellipse at 50% 50%, rgba(116,198,157,0.08) 0%, transparent 70%); }
+        .cta h2 { font-size: 42px; font-weight: 800; margin-bottom: 20px; }
+        .cta h2 span { color: #74c69d; }
+        .cta p { font-size: 16px; color: #a0b4c4; margin-bottom: 40px; }
+
+        /* FOOTER */
+        footer { padding: 30px 60px; border-top: 1px solid #2d3f50; display: flex; align-items: center; justify-content: space-between; }
+        footer p { color: #a0b4c4; font-size: 13px; }
+        footer span { color: #74c69d; }
+
+        /* ANIMATIONS */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .floating { animation: float 3s ease-in-out infinite; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-up { animation: fadeUp 0.8s ease forwards; }
+        .delay-1 { animation-delay: 0.2s; opacity: 0; }
+        .delay-2 { animation-delay: 0.4s; opacity: 0; }
+        .delay-3 { animation-delay: 0.6s; opacity: 0; }
+
+        /* PARTICLES */
+        .particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+        .particle { position: absolute; width: 4px; height: 4px; background: #74c69d; border-radius: 50%; opacity: 0.3; animation: particleFloat linear infinite; }
+        @keyframes particleFloat { 0% { transform: translateY(100vh) rotate(0deg); opacity: 0; } 10% { opacity: 0.3; } 90% { opacity: 0.3; } 100% { transform: translateY(-100px) rotate(720deg); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div class="logo">🌿 Carbon<span>Logistics</span></div>
+    <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how">How it Works</a>
+        <a href="#tech">Tech Stack</a>
+        <a href="/app" class="nav-cta">🚀 Launch App</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="particles" id="particles"></div>
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+        <div class="hero-badge fade-up">🏆 AI-Powered Green Logistics Solution</div>
+        <h1 class="fade-up delay-1">Reduce Carbon Emissions<br><span>One Delivery at a Time</span></h1>
+        <p class="fade-up delay-2">An intelligent logistics optimization system that uses Machine Learning to recommend eco-friendly routes, predict fuel consumption, and track real-time carbon emissions across your entire fleet.</p>
+        <div class="hero-btns fade-up delay-3">
+            <a href="/app" class="btn-primary">🚀 Launch App</a>
+            <a href="#features" class="btn-secondary">📖 Learn More</a>
+        </div>
+    </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+    <div class="stats-grid">
+        <div class="stat">
+            <h3>3</h3>
+            <p>ML Models Used</p>
+        </div>
+        <div class="stat">
+            <h3>1000+</h3>
+            <p>Training Data Points</p>
+        </div>
+        <div class="stat">
+            <h3>5+</h3>
+            <p>Free APIs Integrated</p>
+        </div>
+        <div class="stat">
+            <h3>20+</h3>
+            <p>Features Built</p>
+        </div>
+    </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+    <div class="section-title">
+        <h2>Everything You Need for <span>Green Logistics</span></h2>
+        <p>A complete AI-powered platform for sustainable delivery operations</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🗺️</div>
+            <h3>Smart Route Optimization</h3>
+            <p>AI compares Highway, City and Mixed routes in real-time and recommends the most eco-friendly option based on traffic, distance and vehicle type.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h3>3 ML Models</h3>
+            <p>Random Forest, Gradient Boosting and Linear Regression models work together to predict fuel consumption and carbon emissions with high accuracy.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Analytics Dashboard</h3>
+            <p>Real-time charts, carbon grade scoring (A/B/C), CO2 comparison, weekly trends and sustainability impact reports with PDF download.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🚛</div>
+            <h3>Fleet Management</h3>
+            <p>Optimize multiple deliveries simultaneously with vehicle number plate tracking. Monitor your entire fleet's carbon footprint in one place.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>EV Simulator</h3>
+            <p>See exactly how much CO2 and money you save by switching to Electric Vehicles. Compare current vehicle vs EV side by side.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📍</div>
+            <h3>Live Vehicle Tracking</h3>
+            <p>Track your delivery fleet in real-time on a satellite map using vehicle number plates. Auto-updates every 5 seconds.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🛰️</div>
+            <h3>Satellite Map</h3>
+            <p>Interactive map with Street, Satellite and Dark modes. Shows real routes, traffic colors, EV charging stations and live vehicle positions.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">💬</div>
+            <h3>AI Chatbot Assistant</h3>
+            <p>Powered by LLaMA AI, the chatbot answers any question about logistics, sustainability, emissions and provides personalized delivery advice.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌿</div>
+            <h3>Carbon Offset Calculator</h3>
+            <p>Calculate the exact cost to offset your carbon emissions. See equivalent trees needed, km to avoid and LED bulb hours saved.</p>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+    <div class="how-inner">
+        <div class="section-title">
+            <h2>How It <span>Works</span></h2>
+            <p>From input to eco-friendly recommendation in seconds</p>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Enter Delivery Details</h3>
+                <p>Input source, destination, vehicle type and cargo weight. Our address autocomplete makes it easy to find any location.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>AI Analyzes Routes</h3>
+                <p>3 ML models calculate fuel consumption and CO2 emissions for Highway, City and Mixed routes simultaneously.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Get Eco Recommendation</h3>
+                <p>System recommends the greenest route with grade score, CO2 savings, journey time and EV charging stations on map.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TECH STACK -->
+<section class="tech" id="tech">
+    <div class="section-title">
+        <h2>Built With <span>Modern Technology</span></h2>
+        <p>Production-grade tech stack used by real companies</p>
+    </div>
+    <div class="tech-badges">
+        <span class="tech-badge">🐍 Python</span>
+        <span class="tech-badge">🌶️ Flask</span>
+        <span class="tech-badge">🤖 Scikit-learn</span>
+        <span class="tech-badge">🐼 Pandas</span>
+        <span class="tech-badge">🔢 NumPy</span>
+        <span class="tech-badge">🗺️ Leaflet.js</span>
+        <span class="tech-badge">📊 Plotly</span>
+        <span class="tech-badge">🛣️ OSRM API</span>
+        <span class="tech-badge">📍 Nominatim API</span>
+        <span class="tech-badge">⚡ OpenChargeMap</span>
+        <span class="tech-badge">🛰️ Esri Satellite</span>
+        <span class="tech-badge">💾 SQLite</span>
+        <span class="tech-badge">🦙 LLaMA AI</span>
+        <span class="tech-badge">⚡ Groq API</span>
+        <span class="tech-badge">📄 ReportLab PDF</span>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+    <h2>Ready to Make Logistics <span>Greener?</span></h2>
+    <p>Start optimizing your delivery routes and reducing carbon emissions today</p>
+    <a href="/app" class="btn-primary" style="font-size:18px; padding:18px 48px;">🚀 Launch the App</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <p>🌿 Carbon Logistics Optimizer — <span>AI-Powered Green Delivery System</span></p>
+    <p>Built with ❤️ for a <span>sustainable future</span></p>
+</footer>
+
+<script>
+// Particles
+function createParticles() {
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.animationDuration = (Math.random() * 10 + 8) + 's';
+        p.style.animationDelay = (Math.random() * 10) + 's';
+        p.style.width = p.style.height = (Math.random() * 4 + 2) + 'px';
+        container.appendChild(p);
+    }
+}
+createParticles();
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+    });
+});
+</script>
+
+</body>
+</html>

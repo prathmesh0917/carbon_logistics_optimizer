@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Vehicle Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f1923; color: #fff; }
+        header { background: linear-gradient(135deg, #1a472a, #2d6a4f); padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { font-size: 24px; color: #74c69d; }
+        header p { font-size: 13px; color: #b7e4c7; }
+        .back-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #74c69d; background: transparent; color: #74c69d; cursor: pointer; font-size: 13px; text-decoration: none; }
+        .back-btn:hover { background: #74c69d; color: #0f1923; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
+        .card { background: #1a2634; border-radius: 12px; padding: 30px; margin-bottom: 25px; border: 1px solid #2d3f50; }
+        .card h2 { font-size: 18px; color: #74c69d; margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        label { font-size: 13px; color: #a0b4c4; margin-bottom: 6px; display: block; }
+        input { width: 100%; padding: 12px; background: #0f1923; border: 1px solid #2d3f50; border-radius: 8px; color: #fff; font-size: 14px; }
+        input:focus { outline: none; border-color: #74c69d; }
+        .btn { padding: 12px 20px; background: linear-gradient(135deg, #1a472a, #2d6a4f); color: #74c69d; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        #tracking-map { width: 100%; height: 500px; border-radius: 10px; border: 1px solid #2d3f50; }
+        .vehicle-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .vehicle-card { background: #0f1923; border-radius: 10px; padding: 15px; border: 1px solid #2d3f50; }
+        .vehicle-card h3 { color: #74c69d; font-size: 14px; margin-bottom: 8px; }
+        .vehicle-card p { color: #a0b4c4; font-size: 12px; margin-bottom: 4px; }
+        .vehicle-card span { color: #fff; font-weight: bold; }
+        .pulse { display: inline-block; width: 8px; height: 8px; background: #74c69d; border-radius: 50%; animation: pulse 1.5s infinite; margin-right: 6px; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .update-time { font-size: 12px; color: #a0b4c4; margin-bottom: 15px; }
+        .simulate-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #2d3f50; }
+        .simulate-section h3 { color: #74c69d; margin-bottom: 15px; font-size: 15px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>📍 Live Vehicle Tracker</h1>
+        <p>Real-time tracking of your delivery fleet by number plate</p>
+    </div>
+    <a href="/" class="back-btn">← Back to App</a>
+</header>
+
+<div class="container">
+
+    <div class="card">
+        <h2>🗺️ Live Fleet Map</h2>
+        <div class="update-time">🔄 Auto-updates every 5 seconds | Last updated: <span id="last-update">-</span></div>
+        <div id="tracking-map"></div>
+        <div class="vehicle-list" id="vehicle-list"></div>
+    </div>
+
+    <div class="card">
+        <h2>📍 Update Vehicle Location</h2>
+        <p style="color:#a0b4c4; font-size:13px; margin-bottom:15px;">In a real deployment this would use GPS. Here you can manually simulate vehicle locations.</p>
+        <div class="form-grid">
+            <div>
+                <label>🚘 Number Plate</label>
+                <input type="text" id="track-plate" placeholder="e.g. MH12AB1234">
+            </div>
+            <div>
+                <label>📍 Latitude</label>
+                <input type="number" id="track-lat" placeholder="e.g. 18.5204" step="0.0001">
+            </div>
+            <div>
+                <label>📍 Longitude</label>
+                <input type="number" id="track-lng" placeholder="e.g. 73.8567" step="0.0001">
+            </div>
+        </div>
+        <button class="btn" onclick="updateLocation()">📍 Update Location</button>
+
+        <div class="simulate-section">
+            <h3>🎮 Quick Simulate (Demo Vehicles)</h3>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn" onclick="simulateVehicle('MH12AB1234', 18.5204, 73.8567)">🚚 MH12AB1234</button>
+                <button class="btn" onclick="simulateVehicle('DL01CD5678', 28.6139, 77.2090)">🚐 DL01CD5678</button>
+                <button class="btn" onclick="simulateVehicle('KA03EF9012', 12.9716, 77.5946)">🚗 KA03EF9012</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let trackingMap = null;
+let vehicleMarkers = {};
+
+function initTrackingMap() {
+    trackingMap = L.map('tracking-map').setView([20.5937, 78.9629], 5);
+
+    const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+    const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB' });
+
+    street.addTo(trackingMap);
+    L.control.layers({ '🗺️ Street': street, '🛰️ Satellite': satellite, '🌑 Dark': dark }).addTo(trackingMap);
+
+    setTimeout(() => trackingMap.invalidateSize(), 300);
+}
+
+const vehicleColors = ['#74c69d', '#4488ff', '#f4a261', '#e63946', '#b388ff'];
+let colorIndex = 0;
+const plateColors = {};
+
+async function fetchTracking() {
+    try {
+        const res = await fetch('/tracking-data');
+        const data = await res.json();
+
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+
+        Object.keys(data).forEach(plate => {
+            const vehicle = data[plate];
+            if (!plateColors[plate]) {
+                plateColors[plate] = vehicleColors[colorIndex % vehicleColors.length];
+                colorIndex++;
+            }
+            const color = plateColors[plate];
+
+            if (vehicleMarkers[plate]) {
+                vehicleMarkers[plate].setLatLng([vehicle.lat, vehicle.lng]);
+            } else {
+                vehicleMarkers[plate] = L.marker([vehicle.lat, vehicle.lng], {
+                    icon: L.divIcon({
+                        className: '',
+                        html: `<div style="background:${color};color:#0f1923;padding:6px 10px;border-radius:8px;font-weight:bold;font-size:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🚛 ${plate}</div>`,
+                        iconAnchor: [40, 15]
+                    })
+                }).bindPopup(`<b>🚛 ${plate}</b><br>Lat: ${vehicle.lat}<br>Lng: ${vehicle.lng}<br>Updated: ${vehicle.timestamp}`)
+                .addTo(trackingMap);
+            }
+        });
+
+        // Update vehicle cards
+        let html = '';
+        Object.keys(data).forEach(plate => {
+            const vehicle = data[plate];
+            const color = plateColors[plate] || '#74c69d';
+            html += `
+                <div class="vehicle-card" style="border-color:${color}">
+                    <h3><span class="pulse" style="background:${color}"></span>${plate}</h3>
+                    <p>Latitude: <span>${vehicle.lat}</span></p>
+                    <p>Longitude: <span>${vehicle.lng}</span></p>
+                    <p>Last Update: <span>${vehicle.timestamp}</span></p>
+                    <button onclick="focusVehicle('${plate}')" style="margin-top:8px; padding:5px 10px; background:${color}; color:#0f1923; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold;">📍 Focus</button>
+                </div>`;
+        });
+        document.getElementById('vehicle-list').innerHTML = html || '<p style="color:#a0b4c4; grid-column:span 3; text-align:center;">No vehicles tracked yet. Use the form below to add vehicles!</p>';
+
+    } catch(e) {
+        console.error('Tracking error:', e);
+    }
+}
+
+function focusVehicle(plate) {
+    if (vehicleMarkers[plate]) {
+        trackingMap.setView(vehicleMarkers[plate].getLatLng(), 12);
+        vehicleMarkers[plate].openPopup();
+    }
+}
+
+async function updateLocation() {
+    const plate = document.getElementById('track-plate').value;
+    const lat = parseFloat(document.getElementById('track-lat').value);
+    const lng = parseFloat(document.getElementById('track-lng').value);
+
+    if (!plate || isNaN(lat) || isNaN(lng)) {
+        alert('Please fill all fields!');
+        return;
+    }
+
+    await fetch('/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plate, lat, lng })
+    });
+
+    fetchTracking();
+}
+
+async function simulateVehicle(plate, baseLat, baseLng) {
+    const lat = baseLat + (Math.random() - 0.5) * 0.1;
+    const lng = baseLng + (Math.random() - 0.5) * 0.1;
+
+    await fetch('/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plate, lat: parseFloat(lat.toFixed(4)), lng: parseFloat(lng.toFixed(4)) })
+    });
+
+    fetchTracking();
+}
+
+// Auto simulate movement for demo
+function autoSimulate() {
+    Object.keys(vehicleMarkers).forEach(async plate => {
+        const currentLatLng = vehicleMarkers[plate].getLatLng();
+        const newLat = currentLatLng.lat + (Math.random() - 0.5) * 0.01;
+        const newLng = currentLatLng.lng + (Math.random() - 0.5) * 0.01;
+
+        await fetch('/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plate, lat: parseFloat(newLat.toFixed(4)), lng: parseFloat(newLng.toFixed(4)) })
+        });
+    });
+    fetchTracking();
+}
+
+initTrackingMap();
+fetchTracking();
+setInterval(fetchTracking, 5000);
+setInterval(autoSimulate, 8000);
+</script>
+
+</body>
+</html>
