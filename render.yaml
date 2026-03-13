@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: carbon-logistics-optimizer
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CO2_API_KEY
+        sync: false

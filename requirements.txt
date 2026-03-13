@@ -1,0 +1,11 @@
+flask
+flask-sqlalchemy
+flask-cors
+scikit-learn
+pandas
+numpy
+reportlab
+requests
+groq
+python-dotenv
+gunicorn
