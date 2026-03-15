@@ -10,3 +10,4 @@ groq
 python-dotenv
 gunicorn
 folium
+geopy
