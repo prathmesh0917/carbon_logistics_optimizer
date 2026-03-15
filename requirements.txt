@@ -9,3 +9,4 @@ requests
 groq
 python-dotenv
 gunicorn
+folium
