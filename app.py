@@ -1070,7 +1070,7 @@ def co2map():
 
 @app.route('/co2-live-data')
 def co2_live_data():
-    co2_api_key = "your_actual_key_here"
+    co2_api_key = os.getenv("CO2_API_KEY")
     
     countries = [
         {"name": "India", "code": "IN", "lat": 20.59, "lng": 78.96},
@@ -1088,9 +1088,9 @@ def co2_live_data():
     results = []
     for country in countries:
         try:
-            url = f"https://api.co2signal.com/v1/latest?countryCode={country['code']}"
+            url = f"https://api.electricitymap.org/v3/carbon-intensity/latest?zone={country['code']}"
             res = requests.get(url, headers={
-                'auth-token': co2_api_key
+                'X-Api-Key': co2_api_key
             }, timeout=8)
             print(f"{country['name']} status: {res.status_code}")
             print(f"{country['name']} response: {res.text[:200]}")
