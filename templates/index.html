@@ -229,9 +229,22 @@
                 <h2>🛣️ Route Comparison</h2>
                 <div class="route-cards" id="route-cards"></div>
                 <div class="co2-saved">
-                    <h3>🌱 CO2 Saved by choosing Eco Route vs Worst Route</h3>
-                    <p id="co2-saved-value">-</p>
-                </div>
+    <h3>🌱 CO2 Saved by choosing Eco Route vs Worst Route</h3>
+    <p id="co2-saved-value">-</p>
+</div>
+<button id="whatsapp-btn" onclick="sendWhatsAppAlert()" style="
+    display:none;
+    background: linear-gradient(135deg, #25d366, #128c7e);
+    color: white;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+    width: 100%;
+">📱 Send WhatsApp Alert</button>
             </div>
 
             <div class="card">
@@ -461,6 +474,7 @@
 </div>
 
 <script>
+    let lastPredictionData = null;
 // ========== THEME ==========
 function toggleTheme() {
     document.body.classList.toggle('light');
@@ -685,6 +699,7 @@ async function predict() {
         const worst = routes[routes.length - 1];
         const co2Saved = Math.round((worst.carbon_emission_kg - recommended.carbon_emission_kg) * 10000) / 10000;
         document.getElementById('co2-saved-value').textContent = co2Saved + ' kg CO2 saved 🌱';
+        document.getElementById('whatsapp-btn').style.display = 'block';
         document.getElementById('ml-rf').textContent = recommended.fuel_consumed_liters;
         document.getElementById('ml-lr').textContent = recommended.fuel_lr_prediction;
         document.getElementById('ml-gb').textContent = recommended.carbon_emission_kg;
@@ -706,6 +721,16 @@ async function predict() {
                 </div>`;
         });
         document.getElementById('route-cards').innerHTML = cardsHTML;
+
+            lastPredictionData = {
+        vehicle_type: vehicle_type,
+        distance_km: recommended.distance_km,
+        carbon_emission_kg: recommended.carbon_emission_kg,
+        fuel_consumed_liters: recommended.fuel_consumed_liters,
+        recommended_route: recommended.route_name,
+        source: source,
+        destination: destination
+    };
 
         Plotly.newPlot('emission-chart', [{ x: routes.map(r => r.route_name), y: routes.map(r => r.carbon_emission_kg), type: 'bar', marker: { color: routes.map(r => r.recommended ? '#74c69d' : '#2d6a4f') } }], { title: 'Carbon Emissions (kg)', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#fff' }, margin: { t: 40 } });
         Plotly.newPlot('fuel-chart', [{ x: routes.map(r => r.route_name), y: routes.map(r => r.fuel_consumed_liters), type: 'bar', marker: { color: routes.map(r => r.recommended ? '#74c69d' : '#2d6a4f') } }], { title: 'Fuel Consumption (L)', paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#fff' }, margin: { t: 40 } });
@@ -1156,6 +1181,29 @@ function speak(text) {
         utterance.rate = 0.9;
         utterance.pitch = 1;
         window.speechSynthesis.speak(utterance);
+    }
+}
+
+// ========== WHATSAPP ALERT ==========
+async function sendWhatsAppAlert() {
+    if (!lastPredictionData) {
+        alert('Please make a delivery prediction first!');
+        return;
+    }
+    try {
+        const res = await fetch('/send-whatsapp', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(lastPredictionData)
+        });
+        const d = await res.json();
+        if (d.status === 'success') {
+            alert('✅ WhatsApp alert sent successfully!');
+        } else {
+            alert('❌ Error: ' + d.message);
+        }
+    } catch(e) {
+        alert('❌ Error sending WhatsApp alert!');
     }
 }
 

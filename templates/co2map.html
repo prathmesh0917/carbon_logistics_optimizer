@@ -198,40 +198,40 @@ async function loadCO2Map() {
     const vsIndia = yourIntensity < indiaIntensity ? '✅ Below Avg' : '⚠️ Above Avg';
     document.getElementById('your-vs-india').textContent = vsIndia;
 
-    // Map
-    worldMap = L.map('world-map').setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© CartoDB'
-    }).addTo(worldMap);
+  worldMap = L.map('world-map', {
+    center: [20, 0],
+    zoom: 2,
+    minZoom: 1,
+    maxZoom: 10
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19
+}).addTo(worldMap);
 
     d.countries.forEach(country => {
-        const color = getColor(country.carbon_intensity);
-        const radius = country.carbon_intensity > 0 ? Math.max(20, Math.min(60, country.carbon_intensity / 10)) : 20;
-
-        L.circleMarker([country.lat, country.lng], {
-            radius: radius,
-            fillColor: color,
-            color: color,
-            weight: 2,
-            opacity: 0.9,
-            fillOpacity: 0.6
-        }).bindPopup(`
-            <div style="font-family:Segoe UI; min-width:180px;">
-                <h3 style="color:#74c69d; margin-bottom:8px;">${country.name}</h3>
-                <p style="margin-bottom:4px;">⚡ CO2 Intensity: <b>${country.carbon_intensity} gCO2/kWh</b></p>
-                <p style="margin-bottom:4px;">🏭 Fossil Fuel: <b>${country.fossil_percent}%</b></p>
-                <p>📊 Status: <b style="color:${color}">${country.carbon_intensity < 200 ? 'Clean Energy' : country.carbon_intensity < 400 ? 'Mixed Energy' : 'High Carbon'}</b></p>
-            </div>
-        `).addTo(worldMap);
-
-        L.tooltip({
-            permanent: true,
-            direction: 'center',
-            className: 'country-label'
-        }).setContent(`<span style="font-size:10px; font-weight:bold; color:white;">${country.name.substring(0,3)}</span>`)
-        .setLatLng([country.lat, country.lng])
-        .addTo(worldMap);
-    });
+    const color = getColor(country.carbon_intensity);
+    
+    L.circleMarker([country.lat, country.lng], {
+        radius: 10,
+        fillColor: color,
+        color: '#fff',
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    }).bindPopup(`
+        <div style="font-family:Segoe UI; min-width:180px;">
+            <h3 style="color:#74c69d; margin-bottom:8px;">${country.name}</h3>
+            <p style="margin-bottom:4px;">⚡ CO2 Intensity: <b>${country.carbon_intensity} gCO2/kWh</b></p>
+            <p>📊 Rating: <b style="color:${color}">${country.carbon_intensity < 200 ? 'Clean Energy' : country.carbon_intensity < 400 ? 'Mixed Energy' : 'High Carbon'}</b></p>
+        </div>
+    `).bindTooltip(country.name, {
+        permanent: false,
+        direction: 'top',
+        className: ''
+    }).addTo(worldMap);
+});
 
     setTimeout(() => worldMap.invalidateSize(), 300);
 

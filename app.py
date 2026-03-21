@@ -1070,7 +1070,7 @@ def co2map():
 
 @app.route('/co2-live-data')
 def co2_live_data():
-    co2_api_key = os.getenv("CO2_API_KEY")
+    api_key = os.getenv("EMISSIONS_API_KEY", "").strip()
     
     countries = [
         {"name": "India", "code": "IN", "lat": 20.59, "lng": 78.96},
@@ -1083,30 +1083,36 @@ def co2_live_data():
         {"name": "Brazil", "code": "BR", "lat": -14.23, "lng": -51.92},
         {"name": "Canada", "code": "CA", "lat": 56.13, "lng": -106.34},
         {"name": "South Africa", "code": "ZA", "lat": -30.55, "lng": 22.93},
+        {"name": "China", "code": "CN", "lat": 35.86, "lng": 104.19},
+        {"name": "Norway", "code": "NO", "lat": 60.47, "lng": 8.46},
+        {"name": "Sweden", "code": "SE", "lat": 60.12, "lng": 18.64},
+        {"name": "Poland", "code": "PL", "lat": 51.91, "lng": 19.14},
+        {"name": "Spain", "code": "ES", "lat": 40.46, "lng": -3.74},
     ]
 
     results = []
     for country in countries:
         try:
-            url = f"https://api.electricitymap.org/v3/carbon-intensity/latest?zone={country['code']}"
-            res = requests.get(url, headers={
-                'X-Api-Key': co2_api_key
-            }, timeout=8)
-            print(f"{country['name']} status: {res.status_code}")
-            print(f"{country['name']} response: {res.text[:200]}")
-            
+            url = "https://api.emissions.dev/v1/electricity/emissions"
+            res = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {api_key}"},
+                params={"kwh": 1000, "country": country['code']},
+                timeout=10
+            )
+            print(f"{country['name']} status: {res.status_code} body: {res.text[:300]}")
+
             if res.status_code == 200:
                 data = res.json()
-                print(f"{country['name']} data keys: {data.keys()}")
-                intensity = data.get('data', {}).get('carbonIntensity', 0)
-                fossil = data.get('data', {}).get('fossilFuelPercentage', 0)
+                intensity = data.get('data', {}).get('attributes', {}).get('emissions', {}).get('co2e', 0)
+
                 results.append({
                     'name': country['name'],
                     'code': country['code'],
                     'lat': country['lat'],
                     'lng': country['lng'],
                     'carbon_intensity': round(float(intensity), 1) if intensity else 0,
-                    'fossil_percent': round(float(fossil), 1) if fossil else 0,
+                    'fossil_percent': 0,
                     'status': 'live'
                 })
             else:
@@ -1141,6 +1147,79 @@ def co2_live_data():
         'your_deliveries': your_deliveries
     })
 
+@app.route('/send-whatsapp', methods=['POST'])
+def send_whatsapp():
+    try:
+        from twilio.rest import Client
+        
+        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+        from_number = os.getenv("TWILIO_WHATSAPP_NUMBER")
+        to_number = os.getenv("YOUR_WHATSAPP_NUMBER")
+        
+        data = request.json
+        vehicle = data.get('vehicle_type', 'N/A')
+        distance = data.get('distance_km', 0)
+        emission = data.get('carbon_emission_kg', 0)
+        fuel = data.get('fuel_consumed_liters', 0)
+        route = data.get('recommended_route', 'N/A')
+        source = data.get('source', 'N/A')
+        destination = data.get('destination', 'N/A')
+
+        if emission < 0.5:
+            grade = 'A ⭐'
+        elif emission < 1.5:
+            grade = 'B ✅'
+        else:
+            grade = 'C ⚠️'
+
+        message = f"""🌿 *Carbon Logistics Alert*
+
+📦 *New Delivery!*
+
+🚗 Vehicle: {vehicle.upper()}
+📍 From: {source}
+🏁 To: {destination}
+📏 Distance: {distance} km
+⛽ Fuel Used: {fuel} liters
+💨 CO2 Emitted: {emission} kg
+🛣️ Best Route: {route}
+🏆 Grade: {grade}
+
+🌱 Together for a Greener Planet!
+— Carbon Logistics Optimizer"""
+
+        client = Client(account_sid, auth_token)
+        client.messages.create(
+            from_=f'whatsapp:{from_number}',
+            to=f'whatsapp:{to_number}',
+            body=message
+        )
+
+        return jsonify({'status': 'success', 'message': 'WhatsApp alert sent!'})
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+
+@app.route('/test-whatsapp')
+def test_whatsapp():
+    try:
+        from twilio.rest import Client
+        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+        from_number = os.getenv("TWILIO_WHATSAPP_NUMBER")
+        to_number = os.getenv("YOUR_WHATSAPP_NUMBER")
+
+        client = Client(account_sid, auth_token)
+        client.messages.create(
+            from_=f'whatsapp:{from_number}',
+            to=f'whatsapp:{to_number}',
+            body='🌿 Hello from Carbon Logistics Optimizer! WhatsApp alerts are working! 🚀'
+        )
+        return jsonify({'status': 'success', 'message': 'Test WhatsApp sent!'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 if __name__ == '__main__':
     app.run(debug=False)
